@@ -1,3 +1,7 @@
+"use client";
+
+import { useI18n } from "@/components/locale-provider";
+
 const signals = [
   { title: "Pago seguro", text: "Procesado mediante plataformas de pago confiables.", icon: <path d="M7 10V8a5 5 0 0 1 10 0v2 M5 10h14v10H5V10Z M12 14v2" /> },
   { title: "Envío con seguimiento", text: "Consulta el estado de tu pedido cuando esté disponible.", icon: <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z M3 7.5l9 4.5 9-4.5 M12 12v9" /> },
@@ -6,5 +10,6 @@ const signals = [
 ];
 
 export function TrustSignals() {
-  return <div className="trust-signals">{signals.map((signal) => <div className="trust-signal" key={signal.title}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{signal.icon}</svg><div><strong>{signal.title}</strong><span>{signal.text}</span></div></div>)}</div>;
+  const { t } = useI18n();
+  return <div className="trust-signals">{signals.map((signal) => <div className="trust-signal" key={signal.title}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{signal.icon}</svg><div><strong>{t(signal.title)}</strong><span>{t(signal.text)}</span></div></div>)}</div>;
 }

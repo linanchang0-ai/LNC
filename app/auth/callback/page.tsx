@@ -2,9 +2,11 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/locale-provider";
 
 export default function AuthCallbackPage() {
-  const [message, setMessage] = useState("Verificando tu enlace seguro...");
+  const { t } = useI18n();
+  const [message, setMessage] = useState(() => t("Verificando tu enlace seguro..."));
 
   useEffect(() => {
     const completeAuth = async () => {
@@ -15,7 +17,7 @@ export default function AuthCallbackPage() {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       if (!supabaseUrl || !supabaseAnonKey) {
-        setMessage("No se pudo configurar la autenticación.");
+        setMessage(t("No se pudo configurar la autenticación."));
         return;
       }
 
@@ -34,13 +36,13 @@ export default function AuthCallbackPage() {
           : await supabase.auth.getSession();
 
       if (error) {
-        setMessage("El enlace expiró o no es válido. Solicita uno nuevo.");
+        setMessage(t("El enlace expiró o no es válido. Solicita uno nuevo."));
         return;
       }
 
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
-        setMessage("No se pudo verificar tu sesión. Solicita un nuevo enlace.");
+        setMessage(t("No se pudo verificar tu sesión. Solicita un nuevo enlace."));
         return;
       }
       const adminSession = await fetch("/api/admin/session").then((response) => response.ok ? response.json() as Promise<{ authenticated?: boolean }> : null).catch(() => null);
@@ -51,7 +53,7 @@ export default function AuthCallbackPage() {
     };
 
     void completeAuth();
-  }, []);
+  }, [t]);
 
   return <div className="container-shell" style={{ padding: "56px 0 80px" }}><p className="muted">{message}</p></div>;
 }

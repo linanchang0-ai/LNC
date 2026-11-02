@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type PointerEvent, type TransitionEvent } from "react";
 import type { HomepageSlide } from "@/lib/homepage-slides";
 import { TimeAwareHero } from "@/components/time-aware-hero";
+import { useI18n } from "@/components/locale-provider";
 
 type CarouselPointer = { id: number; startX: number; startY: number };
 
@@ -13,6 +14,7 @@ export function HomepageCarousel({ slides, intervalSeconds }: { slides: Homepage
 }
 
 function HomepageCarouselTrack({ slides, intervalSeconds }: { slides: HomepageSlide[]; intervalSeconds: number }) {
+  const { t } = useI18n();
   const hasMultipleSlides = slides.length > 1;
   const [trackIndex, setTrackIndex] = useState(hasMultipleSlides ? 1 : 0);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -83,7 +85,7 @@ function HomepageCarouselTrack({ slides, intervalSeconds }: { slides: HomepageSl
   };
 
   return (
-    <section className="homepage-carousel" aria-label="首页轮播">
+    <section className="homepage-carousel" aria-label={t("Carrusel de inicio")}>
       <div
         className="homepage-carousel-viewport"
         onPointerDown={startSwipe}

@@ -8,6 +8,8 @@ import { CookieConsent } from "@/components/cookie-consent";
 import { AuthRecoveryRedirect } from "@/components/auth-recovery-redirect";
 import MetaPixel from "@/components/MetaPixel";
 import { PageBackButton } from "@/components/page-back-button";
+import { LocaleProvider } from "@/components/locale-provider";
+import { getRequestLocale } from "@/lib/server-locale";
 
 export const metadata: Metadata = {
   title: siteConfig.meta.title,
@@ -31,22 +33,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getRequestLocale();
   return (
-    <html lang="es-MX" suppressHydrationWarning>
+    <html lang={locale === "es" ? "es-MX" : locale === "zh" ? "zh-CN" : "en"} suppressHydrationWarning>
       <body>
         <MetaPixel />
         <CartProvider>
-          <AuthRecoveryRedirect />
-          <div className="shell">
-            <Header />
-            <main className="page-wrap">
-              <PageBackButton />
-              {children}
-            </main>
-            <Footer />
-            <CookieConsent />
-          </div>
+          <LocaleProvider locale={locale}>
+            <AuthRecoveryRedirect />
+            <div className="shell">
+              <Header />
+              <main className="page-wrap">
+                <PageBackButton />
+                {children}
+              </main>
+              <Footer />
+              <CookieConsent />
+            </div>
+          </LocaleProvider>
         </CartProvider>
       </body>
     </html>

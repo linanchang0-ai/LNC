@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/locale-provider";
 
 type HeroMoment = "manana" | "mediodia" | "atardecer" | "noche";
 
@@ -35,6 +36,7 @@ function HeroImage({ moment, active, priority }: { moment: HeroMoment; active: b
 }
 
 export function TimeAwareHero() {
+  const { t } = useI18n();
   const [currentMoment, setCurrentMoment] = useState<HeroMoment>("noche");
   const [previousMoment, setPreviousMoment] = useState<HeroMoment | null>(null);
 
@@ -76,11 +78,11 @@ export function TimeAwareHero() {
       <div className="hero-overlay" />
       <div className="container-shell hero-content">
         <div className="hero-copy">
-          <span className="eyebrow subdued">LNC SPORTS · DISEÑO COTIDIANO</span>
-          <h1>Diseño para vivir mejor.</h1>
-          <p>Piezas esenciales para tu día a día.</p>
+          <span className="eyebrow subdued">{t("LNC SPORTS · DISEÑO COTIDIANO")}</span>
+          <h1>{t("Diseño para vivir mejor.")}</h1>
+          <p>{t("Piezas esenciales para tu día a día.")}</p>
           <div className="hero-actions">
-            <Link href="/shop" className="primary-button">Explorar colección</Link>
+            <Link href="/shop" className="primary-button">{t("Explorar colección")}</Link>
           </div>
         </div>
       </div>

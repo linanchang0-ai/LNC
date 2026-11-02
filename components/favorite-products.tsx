@@ -5,8 +5,10 @@ import { type Product } from "@/data/products";
 import { ProductCard } from "@/components/product-card";
 import { useWishlist } from "@/components/wishlist";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/locale-provider";
 
 export function FavoriteProducts() {
+  const { t } = useI18n();
   const { ids } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
@@ -21,7 +23,7 @@ export function FavoriteProducts() {
   if (!productsLoaded) return null;
 
   if (favorites.length === 0) {
-    return <div className="empty-state"><p className="muted">Tu lista de favoritos está vacía. Guarda las piezas que más te gusten para encontrarlas aquí.</p><Link href="/shop" className="primary-button">Explorar colección</Link></div>;
+    return <div className="empty-state"><p className="muted">{t("Tu lista de favoritos está vacía. Guarda las piezas que más te gusten para encontrarlas aquí.")}</p><Link href="/shop" className="primary-button">{t("Explorar colección")}</Link></div>;
   }
 
   return <div className="product-grid">{favorites.map((product) => <ProductCard key={product.id} product={product} />)}</div>;

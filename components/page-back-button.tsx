@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useI18n } from "@/components/locale-provider";
 
 const pagesWithExistingBackLink = new Set([
   "/order-lookup",
@@ -21,6 +22,7 @@ function getFallbackPath(pathname: string) {
 }
 
 export function PageBackButton() {
+  const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -39,7 +41,7 @@ export function PageBackButton() {
 
   return (
     <div className="container-shell page-back-wrap">
-      <button type="button" className="back-button" onClick={handleBack}>Volver</button>
+      <button type="button" className="back-button" onClick={handleBack}>{t("Volver")}</button>
     </div>
   );
 }

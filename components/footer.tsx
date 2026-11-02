@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { NewsletterSignup } from "@/components/newsletter-signup";
+import { useI18n } from "@/components/locale-provider";
+import { usePathname } from "next/navigation";
+import { translateText } from "@/lib/i18n";
 
 export function Footer() {
+  const { locale: selectedLocale } = useI18n();
+  const pathname = usePathname();
+  const locale = pathname?.startsWith("/admin") ? "zh" : selectedLocale;
+  const t = (text: string) => translateText(locale, text);
   return (
     <footer className="footer">
       <div className="container-shell footer-grid">
@@ -11,53 +20,53 @@ export function Footer() {
             <span>LNC SPORTS</span>
           </div>
           <p className="muted" style={{ maxWidth: 280 }}>
-            Descubre mejores productos para disfrutar más cada día.
+            {t("Descubre mejores productos para disfrutar más cada día.")}
           </p>
         </div>
 
         <div>
-          <h3 className="footer-title">Tienda</h3>
+          <h3 className="footer-title">{t("Tienda")}</h3>
           <div className="footer-links">
-            <Link href="/shop">Comprar todo</Link>
-            <Link href="/shop">Novedades</Link>
-            <Link href="/shop">Más vendidos</Link>
-            <Link href="/shop">Colecciones</Link>
+            <Link href="/shop">{t("Comprar todo")}</Link>
+            <Link href="/shop">{t("Novedades")}</Link>
+            <Link href="/shop">{t("Más vendidos")}</Link>
+            <Link href="/shop">{t("Colecciones")}</Link>
           </div>
         </div>
 
         <div>
-          <h3 className="footer-title">Atención al cliente</h3>
+          <h3 className="footer-title">{t("Atención al cliente")}</h3>
           <div className="footer-links">
-            <Link href="/contact">Contacto</Link>
-            <Link href="/order-lookup">Consulta tu pedido</Link>
-            <Link href="/shipping">Política de envíos</Link>
-            <Link href="/returns-policy">Devoluciones y reembolsos</Link>
+            <Link href="/contact">{t("Contacto")}</Link>
+            <Link href="/order-lookup">{t("Consulta tu pedido")}</Link>
+            <Link href="/shipping">{t("Política de envíos")}</Link>
+            <Link href="/returns-policy">{t("Devoluciones y reembolsos")}</Link>
           </div>
         </div>
 
         <div>
-          <h3 className="footer-title">Nosotros</h3>
+          <h3 className="footer-title">{t("Nosotros")}</h3>
           <div className="footer-links">
-            <Link href="/about">Nuestra historia</Link>
-            <Link href="/about">Sobre LNC SPORTS</Link>
+            <Link href="/about">{t("Nuestra historia")}</Link>
+            <Link href="/about">{t("Sobre LNC SPORTS")}</Link>
           </div>
         </div>
 
         <div>
-          <h3 className="footer-title">Legal</h3>
+          <h3 className="footer-title">{t("Legal")}</h3>
           <div className="footer-links">
-            <Link href="/terms">Términos y condiciones</Link>
-            <Link href="/shipping">Política de envíos</Link>
-            <Link href="/returns-policy">Política de devoluciones</Link>
-            <Link href="/payments">Política de pagos</Link>
-            <Link href="/contact">Contacto</Link>
-            <Link href="/privacy">Política de privacidad</Link>
-            <Link href="/cookies">Cookies</Link>
+            <Link href="/terms">{t("Términos y condiciones")}</Link>
+            <Link href="/shipping">{t("Política de envíos")}</Link>
+            <Link href="/returns-policy">{t("Política de devoluciones")}</Link>
+            <Link href="/payments">{t("Política de pagos")}</Link>
+            <Link href="/contact">{t("Contacto")}</Link>
+            <Link href="/privacy">{t("Política de privacidad")}</Link>
+            <Link href="/cookies">{t("Cookies")}</Link>
           </div>
         </div>
       </div>
-      <div className="container-shell footer-bottom"><span>© 2026 LNC SPORTS. Todos los derechos reservados.</span><span>Instagram · Facebook · TikTok</span></div>
-      <div className="container-shell footer-newsletter"><strong>Únete a la comunidad LNC SPORTS.</strong><NewsletterSignup compact /></div>
+      <div className="container-shell footer-bottom"><span>{t("© 2026 LNC SPORTS. Todos los derechos reservados.")}</span><span>Instagram · Facebook · TikTok</span></div>
+      <div className="container-shell footer-newsletter"><strong>{t("Únete a la comunidad LNC SPORTS.")}</strong><NewsletterSignup compact /></div>
     </footer>
   );
 }

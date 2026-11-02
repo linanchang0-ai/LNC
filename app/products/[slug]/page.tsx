@@ -9,6 +9,7 @@ import { use, useEffect, useState } from "react";
 import { TrustSignals } from "@/components/trust-signals";
 import { useWishlist } from "@/components/wishlist";
 import { metaEvents } from "@/components/MetaPixel";
+import { useI18n } from "@/components/locale-provider";
 
 function imageForColor(product: Product, color: string) {
   return product.colorImages?.[color] ?? product.gallery[product.colors.indexOf(color)] ?? product.image;
@@ -19,6 +20,7 @@ function priceForColor(product: Product, color: string) {
 }
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { t } = useI18n();
   const resolvedParams = use(params);
   const [product, setProduct] = useState<Product>();
   const [productLoaded, setProductLoaded] = useState(false);
@@ -90,50 +92,50 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   return (
     <div className="container-shell" style={{ padding: "24px 0 40px" }}>
       <div className="product-breadcrumb">
-        <button type="button" className="back-button" onClick={handleBackToProducts}>Volver a productos</button>
+        <button type="button" className="back-button" onClick={handleBackToProducts}>{t("Volver a productos")}</button>
       </div>
 
       <div className="product-detail-layout">
         <div className="gallery-grid">
-          <button type="button" className="gallery-main-image" onClick={() => setZoomOpen(true)} aria-label="Zoom product image"><img src={activeImage} alt={product.name} /></button>
+          <button type="button" className="gallery-main-image" onClick={() => setZoomOpen(true)} aria-label={t("Ampliar imagen del producto")}><img src={activeImage} alt={product.name} /></button>
           <div className="gallery-thumbnails">
-            {product.gallery.map((image, index) => <button type="button" key={`${product.slug}-${index}`} className={activeImage === image ? "is-active" : ""} onClick={() => selectImage(image)} aria-label={`Ver imagen ${index + 1} de ${product.name}`}><img src={image} alt={`${product.name} miniatura ${index + 1}`} /></button>)}
+            {product.gallery.map((image, index) => <button type="button" key={`${product.slug}-${index}`} className={activeImage === image ? "is-active" : ""} onClick={() => selectImage(image)} aria-label={`${t("Ver imagen")} ${index + 1} ${t("de")} ${product.name}`}><img src={image} alt={`${product.name} ${t("miniatura")} ${index + 1}`} /></button>)}
           </div>
         </div>
 
         <aside className="detail-panel">
           <h1 className="product-detail-title">{product.name}</h1>
-          <div className="detail-rating" aria-label="5 de 5 estrellas">★★★★★ <span>5.0 · Opiniones</span></div>
+          <div className="detail-rating" aria-label={t("5 de 5 estrellas")}>★★★★★ <span>5.0 · {t("Opiniones")}</span></div>
           <div className="detail-price-row">
             <div className="price">{formatPrice(selectedPrice)}</div>
             {product.oldPrice ? <span className="old-price">{formatPrice(product.oldPrice)}</span> : null}
           </div>
           <p className="muted" style={{ margin: "8px 0 18px" }}>{product.shortDescription}</p>
-          <div className="quantity-control" aria-label="Cantidad">
-            <span>Cantidad</span>
+          <div className="quantity-control" aria-label={t("Cantidad")}>
+            <span>{t("Cantidad")}</span>
             <div>
-              <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Reducir cantidad" disabled={isOutOfStock}>−</button>
+              <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label={t("Reducir cantidad")} disabled={isOutOfStock}>−</button>
               <strong>{quantity}</strong>
-              <button type="button" onClick={() => setQuantity((value) => value + 1)} aria-label="Aumentar cantidad" disabled={isOutOfStock}>+</button>
+              <button type="button" onClick={() => setQuantity((value) => value + 1)} aria-label={t("Aumentar cantidad")} disabled={isOutOfStock}>+</button>
             </div>
           </div>
           <div className="variant-control">
-            <div><span>Color</span><strong>{selectedColor}</strong></div>
+            <div><span>{t("Color")}</span><strong>{selectedColor}</strong></div>
             <div className="variant-options">
               {product.colors.map((color) => <button type="button" key={color} className={selectedColor === color ? "is-selected" : ""} onClick={() => { setSelectedColor(color); setActiveImage(imageForColor(product, color)); }} disabled={isOutOfStock}>{color}</button>)}
             </div>
           </div>
           {product.sizes?.length ? <div className="variant-control">
-            <div><span>Talla</span><strong>{selectedSize || "Elige una talla"}</strong></div>
-            <div className="variant-options" role="group" aria-label="Selecciona una talla">
+            <div><span>{t("Talla")}</span><strong>{selectedSize || t("Elige una talla")}</strong></div>
+            <div className="variant-options" role="group" aria-label={t("Selecciona una talla")}>
               {product.sizes.map((size) => <button type="button" key={size} className={selectedSize === size ? "is-selected" : ""} aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} disabled={isOutOfStock}>{size}</button>)}
             </div>
           </div> : null}
-          <div className="meta-row"><span>Disponibilidad</span><span>{product.stock}</span></div>
-          <div className="meta-row"><span>Materiales</span><span>{product.materials.join(", ")}</span></div>
-          <div className="meta-row"><span>Dimensiones</span><span>{product.dimensions}</span></div>
-          <div className="meta-row"><span>Envío</span><span>{product.shippingFee ? formatPrice(product.shippingFee) : "Gratis"}</span></div>
-          <div className="meta-row"><span>Entrega estimada</span><span>10-25 días hábiles</span></div>
+          <div className="meta-row"><span>{t("Disponibilidad")}</span><span>{product.stock}</span></div>
+          <div className="meta-row"><span>{t("Materiales")}</span><span>{product.materials.join(", ")}</span></div>
+          <div className="meta-row"><span>{t("Dimensiones")}</span><span>{product.dimensions}</span></div>
+          <div className="meta-row"><span>{t("Envío")}</span><span>{product.shippingFee ? formatPrice(product.shippingFee) : t("Gratis")}</span></div>
+          <div className="meta-row"><span>{t("Entrega estimada")}</span><span>{t("10-25 días hábiles")}</span></div>
           <div className="detail-actions">
             <button
               className="primary-button"
@@ -151,7 +153,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 });
               }}
             >
-              {isOutOfStock ? "Agotado" : "Añadir al carrito"}
+              {isOutOfStock ? t("Agotado") : t("Añadir al carrito")}
             </button>
             <button
               className="secondary-button"
@@ -170,24 +172,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 router.push("/checkout");
               }}
             >
-              {isOutOfStock ? "Agotado" : "Comprar ahora"}
+              {isOutOfStock ? t("Agotado") : t("Comprar ahora")}
             </button>
           </div>
           <div className="detail-assurances">
-            <div><strong>Pago seguro con PayPal</strong><span>Compra protegida</span></div>
-            <div><strong>Envío a todo México</strong><span>Seguimiento cuando esté disponible</span></div>
-            <div><strong>Políticas transparentes</strong><span><Link href="/returns-policy">Consulta las condiciones</Link></span></div>
-            <div><strong>Atención personalizada</strong><span>Estamos para ayudarte</span></div>
+            <div><strong>{t("Pago seguro con PayPal")}</strong><span>{t("Compra protegida")}</span></div>
+            <div><strong>{t("Envío a todo México")}</strong><span>{t("Seguimiento cuando esté disponible")}</span></div>
+            <div><strong>{t("Políticas transparentes")}</strong><span><Link href="/returns-policy">{t("Consulta las condiciones")}</Link></span></div>
+            <div><strong>{t("Atención personalizada")}</strong><span>{t("Estamos para ayudarte")}</span></div>
           </div>
           <div className="detail-actions" style={{ marginTop: 12 }}>
-            <button className={`ghost-button ${isSaved(product.id) ? "is-saved" : ""}`} onClick={() => toggle(product.id, product.slug)}>{isSaved(product.id) ? "♥ Guardado" : "♡ Favoritos"}</button>
-            <Link href="/contact" className="ghost-button">Consultar sobre este producto</Link>
+            <button className={`ghost-button ${isSaved(product.id) ? "is-saved" : ""}`} onClick={() => toggle(product.id, product.slug)}>{isSaved(product.id) ? `♥ ${t("Guardado")}` : `♡ ${t("Favoritos")}`}</button>
+            <Link href="/contact" className="ghost-button">{t("Consultar sobre este producto")}</Link>
           </div>
         </aside>
       </div>
 
       <section style={{ marginTop: 26 }}>
-        <h2 className="section-title">Descripción del producto</h2>
+        <h2 className="section-title">{t("Descripción del producto")}</h2>
         <p className="muted" style={{ marginTop: 12 }}>{product.description}</p>
         <ul className="detail-list">
           {product.details.map((detail) => (
@@ -195,8 +197,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           ))}
         </ul>
       </section>
-      {product.detailImages?.length ? <section className="product-detail-images" aria-label="Detalles del producto">
-        <h2 className="section-title">Detalles del producto</h2>
+      {product.detailImages?.length ?       <section className="product-detail-images" aria-label={t("Detalles del producto")}>
+        <h2 className="section-title">{t("Detalles del producto")}</h2>
         <div>
           {product.detailImages.map((image, index) => <img key={`${product.slug}-detail-${index}`} src={image} alt={`${product.name} detalle ${index + 1}`} loading="lazy" />)}
         </div>
@@ -205,21 +207,21 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">Características</h2>
+          <h2 className="section-title">{t("Características")}</h2>
         </div>
         <div className="story-grid">
-          <div className="story-card"><h3>Diseño</h3><p>Formas sobrias y presencia visual que elevan el ambiente.</p></div>
-          <div className="story-card"><h3>Calidad</h3><p>Materiales seleccionados y acabados pensados para durar.</p></div>
-          <div className="story-card"><h3>Materiales</h3><p>Texturas premium, durabilidad y detalles funcionales.</p></div>
-          <div className="story-card"><h3>Incluye</h3><p>La pieza preparada para integrarse a tu espacio desde el primer día.</p></div>
+          <div className="story-card"><h3>{t("Diseño")}</h3><p>{t("Formas sobrias y presencia visual que elevan el ambiente.")}</p></div>
+          <div className="story-card"><h3>{t("Calidad")}</h3><p>{t("Materiales seleccionados y acabados pensados para durar.")}</p></div>
+          <div className="story-card"><h3>{t("Materiales")}</h3><p>{t("Texturas premium, durabilidad y detalles funcionales.")}</p></div>
+          <div className="story-card"><h3>{t("Incluye")}</h3><p>{t("La pieza preparada para integrarse a tu espacio desde el primer día.")}</p></div>
         </div>
       </section>
 
       <div style={{ marginTop: 24 }}>
-        <button type="button" className="ghost-button" onClick={handleBackToProducts}>Volver a productos</button>
+        <button type="button" className="ghost-button" onClick={handleBackToProducts}>{t("Volver a productos")}</button>
       </div>
       <ContactButton />
-      {zoomOpen ? <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="Vista previa de la imagen del producto" onClick={() => setZoomOpen(false)}><button type="button" aria-label="Cerrar vista previa de la imagen" onClick={() => setZoomOpen(false)}>×</button><img src={activeImage} alt={product.name} /></div> : null}
+      {zoomOpen ? <div className="image-lightbox" role="dialog" aria-modal="true" aria-label={t("Vista previa de la imagen del producto")} onClick={() => setZoomOpen(false)}><button type="button" aria-label={t("Cerrar vista previa de la imagen")} onClick={() => setZoomOpen(false)}>×</button><img src={activeImage} alt={product.name} /></div> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
     </div>
   );

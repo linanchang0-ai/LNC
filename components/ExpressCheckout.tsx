@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ApplePayButton from "./ApplePayButton";
 import GooglePayButton from "./GooglePayButton";
 import PayPalOfficialButtons from "./PayPalOfficialButtons";
+import { useI18n } from "@/components/locale-provider";
 
 export type CheckoutDraftInput = {
   customerName: string;
@@ -30,6 +31,7 @@ declare global {
 }
 
 export default function ExpressCheckout({ onSuccess, onError, checkoutData, disabled }: ExpressCheckoutProps) {
+  const { locale, t } = useI18n();
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function ExpressCheckout({ onSuccess, onError, checkoutData, disa
         const currency = "MXN";
         // Load PayPal SDK with applepay and googlepay components
         await loadScript(
-          `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${currency}&locale=es_MX&components=buttons,applepay,googlepay&enable-funding=card`,
+          `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=${currency}&locale=${locale === "en" ? "en_US" : locale === "zh" ? "zh_CN" : "es_MX"}&components=buttons,applepay,googlepay&enable-funding=card`,
         );
 
         // Load Apple Pay SDK
@@ -72,12 +74,12 @@ export default function ExpressCheckout({ onSuccess, onError, checkoutData, disa
 
         setScriptsLoaded(true);
       } catch (err) {
-        onError(err instanceof Error ? err.message : "No se pudieron cargar los métodos de pago.");
+        onError(t(err instanceof Error ? err.message : "No se pudieron cargar los métodos de pago."));
       }
     };
 
     loadAllScripts();
-  }, [onError]);
+  }, [locale, onError, t]);
 
   if (!scriptsLoaded) return null;
 
@@ -93,7 +95,7 @@ export default function ExpressCheckout({ onSuccess, onError, checkoutData, disa
       >
         <div style={{ flex: 1, height: 1, backgroundColor: "#e5e7eb" }} />
         <span style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Pago rápido
+          {t("Pago rápido")}
         </span>
         <div style={{ flex: 1, height: 1, backgroundColor: "#e5e7eb" }} />
       </div>

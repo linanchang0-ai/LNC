@@ -1,6 +1,10 @@
+"use client";
+
 import { siteConfig } from "@/lib/site-config";
+import { useI18n } from "@/components/locale-provider";
 
 export function ContactButton() {
+  const { t } = useI18n();
   const whatsappHref = siteConfig.whatsappNumber
     ? `https://wa.me/${siteConfig.whatsappNumber}`
     : "/contact";
@@ -9,7 +13,7 @@ export function ContactButton() {
     <a
       href={whatsappHref}
       className={`contact-float${siteConfig.whatsappNumber ? " is-whatsapp" : ""}`}
-      aria-label={siteConfig.whatsappNumber ? "Contactar por WhatsApp" : "Contactar"}
+      aria-label={siteConfig.whatsappNumber ? t("Contactar por WhatsApp") : t("Contactar")}
       target={siteConfig.whatsappNumber ? "_blank" : undefined}
       rel={siteConfig.whatsappNumber ? "noopener noreferrer" : undefined}
     >

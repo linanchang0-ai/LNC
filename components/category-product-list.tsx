@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/product-card";
 import type { Product } from "@/data/products";
+import { useI18n } from "@/components/locale-provider";
 
 type ProductSort = "price" | "popular" | "recent";
 
 export function CategoryProductList({ products, popularProductIds, popularityAvailable }: { products: Product[]; popularProductIds: string[]; popularityAvailable: boolean }) {
+  const { t } = useI18n();
   const [sort, setSort] = useState<ProductSort>("recent");
   const [priceDescending, setPriceDescending] = useState(false);
   const popularRanks = useMemo(() => new Map(popularProductIds.map((id, index) => [id, index])), [popularProductIds]);
@@ -35,24 +37,24 @@ export function CategoryProductList({ products, popularProductIds, popularityAva
 
   return (
     <>
-      <div className="filter-bar category-sort-controls" aria-label="Ordenar productos">
+      <div className="filter-bar category-sort-controls" aria-label={t("Ordenar productos")}>
         <button className="filter-chip" type="button" aria-pressed={sort === "price"} onClick={() => selectSort("price")}>
-          Precio{sort === "price" ? (priceDescending ? " ↓" : " ↑") : ""}
+          {t("Precio")}{sort === "price" ? (priceDescending ? " ↓" : " ↑") : ""}
         </button>
         <button className="filter-chip" type="button" aria-pressed={sort === "popular"} onClick={() => selectSort("popular")}>
-          Más populares
+          {t("Más populares")}
         </button>
         <button className="filter-chip" type="button" aria-pressed={sort === "recent"} onClick={() => selectSort("recent")}>
-          Más recientes
+          {t("Más recientes")}
         </button>
       </div>
-      {sort === "popular" && !popularityAvailable ? <p className="muted" role="status">销量数据暂不可用，已优先展示精选商品。</p> : null}
+      {sort === "popular" && !popularityAvailable ? <p className="muted" role="status">{t("Los datos de popularidad no están disponibles; mostramos primero los productos destacados.")}</p> : null}
       {sortedProducts.length > 0 ? (
         <div className="product-grid">
           {sortedProducts.map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
       ) : (
-        <div className="empty-state"><p className="muted">No hay productos disponibles.</p></div>
+        <div className="empty-state"><p className="muted">{t("No hay productos disponibles.")}</p></div>
       )}
     </>
   );

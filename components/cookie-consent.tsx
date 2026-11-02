@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
+import { useI18n } from "@/components/locale-provider";
 
 const subscribe = (onStoreChange: () => void) => {
   window.addEventListener("storage", onStoreChange);
@@ -16,6 +17,7 @@ const getSnapshot = () => window.localStorage.getItem("lnc_sports_cookie_consent
 const getServerSnapshot = () => true;
 
 export function CookieConsent() {
+  const { t } = useI18n();
   const pathname = usePathname();
   const hasConsent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const choose = (value: string) => {
@@ -23,5 +25,5 @@ export function CookieConsent() {
     window.dispatchEvent(new CustomEvent("lnc-sports:cookie-choice", { detail: value }));
   };
   if (pathname?.startsWith("/admin") || hasConsent) return null;
-  return <aside className="cookie-consent" aria-label="Consentimiento de cookies"><div><strong>Tu privacidad, con claridad.</strong><p>Usamos cookies esenciales para que LNC SPORTS funcione y cookies opcionales para entender mejor a nuestros clientes.</p></div><div className="cookie-actions"><button type="button" onClick={() => choose("accept")} className="primary-button">Aceptar</button><button type="button" onClick={() => choose("reject")} className="ghost-button">Rechazar</button></div></aside>;
+  return <aside className="cookie-consent" aria-label={t("Consentimiento de cookies")}><div><strong>{t("Tu privacidad, con claridad.")}</strong><p>{t("Usamos cookies esenciales para que LNC SPORTS funcione y cookies opcionales para entender mejor a nuestros clientes.")}</p></div><div className="cookie-actions"><button type="button" onClick={() => choose("accept")} className="primary-button">{t("Aceptar")}</button><button type="button" onClick={() => choose("reject")} className="ghost-button">{t("Rechazar")}</button></div></aside>;
 }
