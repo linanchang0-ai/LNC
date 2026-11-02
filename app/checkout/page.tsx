@@ -35,7 +35,8 @@ export default function CheckoutPage() {
   const [checkoutStep, setCheckoutStep] = useState<"details" | "payment">("details");
   const checkoutTracked = useRef(false);
   const captureAttemptedOrderRef = useRef<string | null>(null);
-  const checkoutPanelRef = useRef<HTMLElement>(null);
+  const checkoutDetailsPanelRef = useRef<HTMLDivElement>(null);
+  const checkoutPaymentPanelRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const checkoutData: CheckoutDraftInput = {
     customerName: `${form.name} ${form.lastName}`.trim(),
@@ -46,7 +47,8 @@ export default function CheckoutPage() {
   const checkoutDetailsComplete = Object.values(checkoutData.shippingAddress).every(Boolean) && Boolean(checkoutData.customerName && checkoutData.email && checkoutData.phone);
 
   useEffect(() => {
-    checkoutPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const panel = checkoutStep === "details" ? checkoutDetailsPanelRef.current : checkoutPaymentPanelRef.current;
+    panel?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [checkoutStep]);
 
   const handleExpressSuccess = (orderNumber: string) => {
@@ -200,7 +202,7 @@ export default function CheckoutPage() {
 
       {checkoutStep === "details" ? (
         <form className="form-shell checkout-form checkout-form--details" onSubmit={handleCheckoutSubmit}>
-          <div className="form-card checkout-card" ref={checkoutPanelRef}>
+          <div className="form-card checkout-card" ref={checkoutDetailsPanelRef}>
             <p className="guest-checkout-note">{t("Puedes comprar como invitado. No necesitas crear una cuenta.")}</p>
             <AddressPasteAssist onRecognize={handleAddressRecognize} />
             <div className="checkout-section">
@@ -286,7 +288,7 @@ export default function CheckoutPage() {
         </form>
       ) : (
         <form className="form-shell checkout-form checkout-form--payment" onSubmit={handlePayPalCheckout}>
-          <section className="summary-card order-summary checkout-payment-panel" ref={checkoutPanelRef} aria-labelledby="checkout-payment-heading">
+          <section className="summary-card order-summary checkout-payment-panel" ref={checkoutPaymentPanelRef} aria-labelledby="checkout-payment-heading">
             <div className="checkout-customer-review">
               <div>
                 <span className="eyebrow subdued">{t("Información de entrega")}</span>
