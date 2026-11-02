@@ -10,11 +10,40 @@ import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 
 export default function CartPage() {
   const { t, locale } = useI18n();
-  const { items, subtotal, shipping, updateQuantity, removeFromCart } = useCart();
-  const [coupon, setCoupon] = useState("");
-  const [discount, setDiscount] = useState(0);
+  const { items, subtotal, shipping, discount, couponCode, couponError, couponPending, total, updateQuantity, removeFromCart, applyCoupon, clearCoupon } = useCart();
+  const [coupon, setCoupon] = useState(couponCode ?? "");
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
   const freeShippingProgress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
-  const finalTotal = subtotal + shipping - discount;
+  const couponStatus = couponError || couponMessage;
+
+  const redeemCoupon = async () => {
+    const code = coupon.trim();
+    if (!code) return;
+
+    setCouponLoading(true);
+    setCouponMessage("");
+    try {
+      const response = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal }),
+      });
+      const data = await response.json() as { code?: string; discount?: number; error?: string };
+      if (!response.ok || !data.code || typeof data.discount !== "number") {
+        setCouponMessage(t(data.error ?? "No se pudo aplicar el cupón."));
+        return;
+      }
+
+      applyCoupon(data.code, data.discount);
+      setCoupon(data.code);
+      setCouponMessage(t("Cupón aplicado."));
+    } catch {
+      setCouponMessage(t("No se pudo aplicar el cupón."));
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   return (
     <div className="container-shell cart-shell" style={{ padding: "24px 0 40px" }}>
@@ -72,12 +101,14 @@ export default function CartPage() {
           <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
           <div className="free-shipping-box"><strong>{subtotal >= FREE_SHIPPING_THRESHOLD ? t("ENVÍO GRATIS DESBLOQUEADO") : t("Agrega {amount} para obtener envío gratis").replace("{amount}", formatPrice(Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)))}</strong><div className="shipping-progress"><span style={{ width: `${freeShippingProgress}%` }} /></div></div>
           <div className="meta-row"><span>{t("Envío")}</span><span>{shipping ? formatPrice(shipping) : t("GRATIS")}</span></div>
-          <div className="meta-row"><span>{t("Descuento")}</span><span>—</span></div>
-          <div className="coupon-row"><input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder={t("Código promocional")} /><button type="button" onClick={() => setDiscount(coupon.trim().toUpperCase() === "LNCSPORTS10" ? Math.round(subtotal * 0.1) : 0)}>{t("Aplicar")}</button></div>
-          {discount > 0 ? <div className="meta-row"><span>{t("Descuento promocional")}</span><span>-{formatPrice(discount)}</span></div> : null}
-          <div className="total-row"><span>{t("Total")}</span><span>{formatPrice(finalTotal)}</span></div>
+          {couponCode ? <div className="meta-row"><span>{t("Descuento")} ({couponCode})</span><span>-{formatPrice(discount)}</span></div> : null}
+          <div className="coupon-row"><input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder={t("Código promocional")} /><button type="button" onClick={() => void redeemCoupon()} disabled={couponLoading}>{couponLoading ? t("Procesando...") : t("Aplicar")}</button></div>
+          {couponPending ? <p className="muted" role="status">{t("Validando el cupón...")}</p> : null}
+          {couponStatus ? <p className="muted" role="status">{t(couponStatus)}</p> : null}
+          {couponCode ? <button type="button" className="text-button" onClick={() => { clearCoupon(); setCoupon(""); setCouponMessage(""); }}>{t("Quitar cupón")}</button> : null}
+          <div className="total-row"><span>{t("Total")}</span><span>{formatPrice(total)}</span></div>
           <div style={{ marginTop: 18 }}>
-            <Link href="/checkout" className="primary-button" style={{ width: "100%" }}>
+            <Link href="/checkout" aria-disabled={couponPending} className="primary-button" style={{ width: "100%", ...(couponPending ? { pointerEvents: "none", opacity: 0.5 } : {}) }}>
               {t("Ir a pagar")}
             </Link>
           </div>

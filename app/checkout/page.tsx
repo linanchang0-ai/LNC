@@ -14,7 +14,7 @@ import { translateProductColor, translateProductField } from "@/lib/i18n";
 
 export default function CheckoutPage() {
   const { t, locale } = useI18n();
-  const { items, subtotal, shipping, discount, couponCode, total, clearCart } = useCart();
+  const { items, subtotal, shipping, discount, couponCode, couponError, couponPending, total, clearCart } = useCart();
   const cartIsEmpty = items.length === 0;
   const [form, setForm] = useState({
     name: "",
@@ -30,8 +30,10 @@ export default function CheckoutPage() {
   });
   const [loading, setLoading] = useState(false);
   const [captureMessage, setCaptureMessage] = useState("");
+  const [confirmedOrderNumber, setConfirmedOrderNumber] = useState("");
   const [expressError, setExpressError] = useState("");
   const checkoutTracked = useRef(false);
+  const captureAttemptedOrderRef = useRef<string | null>(null);
   const router = useRouter();
   const checkoutData: CheckoutDraftInput = {
     customerName: `${form.name} ${form.lastName}`.trim(),
@@ -41,12 +43,13 @@ export default function CheckoutPage() {
   };
   const checkoutDetailsComplete = Object.values(checkoutData.shippingAddress).every(Boolean) && Boolean(checkoutData.customerName && checkoutData.email && checkoutData.phone);
 
-  const handleExpressSuccess = (orderId: string) => {
+  const handleExpressSuccess = (orderNumber: string) => {
     clearCart();
     setCaptureMessage(t("¡Pago confirmado! Gracias por tu pedido."));
+    setConfirmedOrderNumber(orderNumber);
     // Meta Pixel: Purchase
-    metaEvents.purchase(total, "MXN", { order_id: orderId });
-    router.replace(`/checkout?status=confirmed&order=${orderId}`);
+    metaEvents.purchase(total, "MXN", { order_id: orderNumber });
+    router.replace(`/checkout?status=confirmed&order=${encodeURIComponent(orderNumber)}`);
   };
 
   const handleAddressRecognize = (address: AddressFields) => {
@@ -63,7 +66,15 @@ export default function CheckoutPage() {
     const params = new URLSearchParams(window.location.search);
     const paypalOrderId = params.get("token");
     const status = params.get("status");
+    const confirmedOrder = params.get("order");
+    if (status === "confirmed" && confirmedOrder) {
+      setConfirmedOrderNumber(confirmedOrder);
+      setCaptureMessage(t("Pago confirmado. Gracias por tu pedido."));
+      return;
+    }
     if (!paypalOrderId || status !== "success") return;
+    if (captureAttemptedOrderRef.current === paypalOrderId) return;
+    captureAttemptedOrderRef.current = paypalOrderId;
 
     const captureOrder = async () => {
       setLoading(true);
@@ -75,11 +86,14 @@ export default function CheckoutPage() {
           body: JSON.stringify({ orderId: paypalOrderId }),
         });
         if (!response.ok) throw new Error("Payment confirmation failed");
+        const captureData = await response.json() as { orderNumber?: string };
+        if (!captureData.orderNumber) throw new Error("The confirmed payment did not include an order number.");
         clearCart();
         setCaptureMessage(t("Pago confirmado. Gracias por tu pedido."));
+        setConfirmedOrderNumber(captureData.orderNumber);
         // Meta Pixel: Purchase
-        metaEvents.purchase(total, "MXN", { order_id: paypalOrderId });
-        router.replace("/checkout?status=confirmed");
+        metaEvents.purchase(total, "MXN", { order_id: captureData.orderNumber });
+        router.replace(`/checkout?status=confirmed&order=${encodeURIComponent(captureData.orderNumber)}`);
       } catch {
         setCaptureMessage(t("No pudimos confirmar el pago todavía. Contacta con soporte antes de intentarlo de nuevo."));
       } finally {
@@ -104,6 +118,11 @@ export default function CheckoutPage() {
 
   const handlePayPalCheckout = async (event: FormEvent) => {
     event.preventDefault();
+
+    if (couponPending) {
+      setCaptureMessage(t("Validando el cupón..."));
+      return;
+    }
 
     if (items.length === 0) {
       alert(t("Tu carrito está vacío."));
@@ -151,7 +170,7 @@ export default function CheckoutPage() {
         <span className="eyebrow subdued">{t("Pago seguro")}</span>
         <h1>{t("Completa tu pedido")}</h1>
         <p>{t("Compra de forma rápida y segura sin crear una cuenta.")}</p>
-        {captureMessage ? <p className="checkout-status" role="status">{captureMessage}</p> : null}
+        {captureMessage ? <p className="checkout-status" role="status">{captureMessage}{confirmedOrderNumber ? <> {t("Número de pedido")}: <strong>{confirmedOrderNumber}</strong></> : null}</p> : null}
       </div>
 
       <div className="checkout-steps" aria-label={t("Progreso del pago")}>
@@ -236,7 +255,7 @@ export default function CheckoutPage() {
 
           <p className="checkout-delivery-note">{t("Envíos a México: la entrega es estimada y puede variar por procesamiento, paquetería, aduanas y destino.")}</p>
 
-          <ExpressCheckout onSuccess={handleExpressSuccess} onError={setExpressError} checkoutData={checkoutData} disabled={!checkoutDetailsComplete || cartIsEmpty} />
+          <ExpressCheckout onSuccess={handleExpressSuccess} onError={setExpressError} checkoutData={checkoutData} disabled={!checkoutDetailsComplete || cartIsEmpty || couponPending} />
           {expressError ? <p style={{ color: "#dc2626", fontSize: 14, margin: "8px 0" }} role="alert">{expressError}</p> : null}
 
           <div className="checkout-item-list">
@@ -247,6 +266,8 @@ export default function CheckoutPage() {
           </div>
           <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
           {discount > 0 ? <div className="meta-row"><span>{t("Descuento")} {couponCode ? `(${couponCode})` : ""}</span><span>-{formatPrice(discount)}</span></div> : null}
+          {couponPending ? <p className="checkout-status" role="status">{t("Validando el cupón...")}</p> : null}
+          {couponError ? <p className="checkout-status" role="status">{t(couponError)}</p> : null}
           <div className="meta-row"><span>{t("Envío")}</span><span>{formatPrice(shipping)}</span></div>
           <div className="total-row"><span>{t("Total")}</span><span>{formatPrice(total)}</span></div>
           <div style={{ marginTop: 18 }}>
@@ -254,7 +275,7 @@ export default function CheckoutPage() {
               className="primary-button"
               style={{ width: "100%" }}
               type="submit"
-              disabled={loading || cartIsEmpty || !checkoutDetailsComplete}
+              disabled={loading || cartIsEmpty || !checkoutDetailsComplete || couponPending}
               onClick={() => {
                 if (cartIsEmpty) {
                   alert(t("Tu carrito está vacío. Agrega un producto antes de pagar."));

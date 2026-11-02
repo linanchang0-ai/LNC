@@ -114,7 +114,9 @@ export default function GooglePayButton({ onSuccess, onError, checkoutData, disa
           throw new Error("No se pudo capturar el pago");
         }
 
-        onSuccess(paypalOrderId);
+        const captureData = await captureResponse.json() as { orderNumber?: string };
+        if (!captureData.orderNumber) throw new Error("El pago se confirmó, pero no se recibió el número del pedido.");
+        onSuccess(captureData.orderNumber);
         return { transactionState: "SUCCESS" };
       } catch (err) {
         onError(err instanceof Error ? err.message : "Error en el pago con Google Pay");

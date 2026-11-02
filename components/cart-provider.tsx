@@ -30,6 +30,8 @@ type CartContextValue = {
   shipping: number;
   discount: number;
   couponCode: string | null;
+  couponError: string | null;
+  couponPending: boolean;
   total: number;
   itemCount: number;
   addToCart: (product: Omit<CartItem, "quantity">) => void;
@@ -45,7 +47,8 @@ const CART_STORAGE_KEY = "lnc_sports_cart";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [coupon, setCoupon] = useState<{ code: string; discount: number; validatedSubtotal: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(CART_STORAGE_KEY);
@@ -101,18 +104,68 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = () => {
     setItems([]);
     setCoupon(null);
+    setCouponError(null);
   };
-  const applyCoupon = (code: string, discount: number) => setCoupon({ code, discount });
-  const clearCoupon = () => setCoupon(null);
+  const applyCoupon = (code: string, discount: number) => {
+    setCoupon({ code, discount, validatedSubtotal: subtotal });
+    setCouponError(null);
+  };
+  const clearCoupon = () => {
+    setCoupon(null);
+    setCouponError(null);
+  };
 
   const subtotal = useMemo(
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
     [items],
   );
   const shipping = useMemo(() => getShippingCost(subtotal), [subtotal]);
-  const discount = Math.min(subtotal, coupon?.discount ?? 0);
+  const couponPending = Boolean(coupon && coupon.validatedSubtotal !== subtotal);
+  const discount = Math.min(subtotal, coupon && coupon.validatedSubtotal === subtotal ? coupon.discount : 0);
   const total = subtotal + shipping - discount;
   const itemCount = items.reduce((count, item) => count + item.quantity, 0);
+
+  useEffect(() => {
+    const code = coupon?.code;
+    if (!code || coupon.validatedSubtotal === subtotal) return;
+
+    const controller = new AbortController();
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/coupons/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, subtotal }),
+          signal: controller.signal,
+        });
+        const data = await response.json() as { code?: unknown; discount?: unknown; error?: string };
+        if (!active) return;
+        const validatedCode = data.code;
+        const validatedDiscount = data.discount;
+        if (!response.ok || typeof validatedCode !== "string" || typeof validatedDiscount !== "number") {
+          setCoupon((current) => current?.code === code ? null : current);
+          setCouponError(data.error ?? "No se pudo aplicar el cupón.");
+          return;
+        }
+
+        setCoupon((current) => current?.code === code
+          ? { code: validatedCode, discount: validatedDiscount, validatedSubtotal: subtotal }
+          : current);
+        setCouponError(null);
+      } catch {
+        if (!active) return;
+        setCoupon((current) => current?.code === code ? null : current);
+        setCouponError("No se pudo aplicar el cupón.");
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [coupon?.code, coupon?.validatedSubtotal, subtotal]);
 
   const value = useMemo<CartContextValue>(
     () => ({
@@ -121,6 +174,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       shipping,
       discount,
       couponCode: coupon?.code ?? null,
+      couponError,
+      couponPending,
       total,
       itemCount,
       addToCart,
@@ -130,7 +185,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       applyCoupon,
       clearCoupon,
     }),
-    [items, subtotal, shipping, discount, coupon, total, itemCount],
+    [items, subtotal, shipping, discount, coupon, couponError, couponPending, total, itemCount],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

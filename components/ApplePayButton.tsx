@@ -178,8 +178,10 @@ export default function ApplePayButton({ onSuccess, onError, checkoutData, disab
             throw new Error("No se pudo capturar el pago");
           }
 
+          const captureData = await captureResponse.json() as { orderNumber?: string };
+          if (!captureData.orderNumber) throw new Error("El pago se confirmó, pero no se recibió el número del pedido.");
           session.completePayment(ApplePaySessionConstructor.STATUS_SUCCESS);
-          onSuccess(paypalOrderId);
+          onSuccess(captureData.orderNumber);
         } catch (err) {
           session.completePayment(ApplePaySessionConstructor.STATUS_FAILURE);
           onError(err instanceof Error ? err.message : "Error en el pago con Apple Pay");
