@@ -121,7 +121,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
           </div>
           <div className="variant-control">
-            <div><span>{t("Color")}</span><strong>{selectedColor}</strong></div>
+            <div><span>{t("Color")}</span><strong>{t(selectedColor)}</strong></div>
             <div className="variant-options">
               {product.colors.map((color) => <button type="button" key={color} className={selectedColor === color ? "is-selected" : ""} onClick={() => { setSelectedColor(color); setActiveImage(imageForColor(product, color)); }} disabled={isOutOfStock}>{t(color)}</button>)}
             </div>
