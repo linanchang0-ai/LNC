@@ -196,6 +196,8 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Agrega {amount} para obtener envío gratis": { en: "Add {amount} to get free shipping", zh: "再购买 {amount} 即可享受免运费" },
   "ENVÍO GRATIS DESBLOQUEADO": { en: "FREE SHIPPING UNLOCKED", zh: "已解锁免运费" },
   "MXN 150 en pedidos menores a MXN 1,500; gratis desde MXN 1,500": { en: "MXN 150 shipping on orders under MXN 1,500; free on orders of MXN 1,500 or more", zh: "订单金额低于 MXN 1,500 收取 MXN 150 运费；满 MXN 1,500 免运费" },
+  "Costo de envío": { en: "Shipping cost", zh: "运费" },
+  "Los pedidos con un subtotal de productos inferior a MXN 1,500 tienen un costo de envío de MXN 150. Los pedidos con un subtotal igual o superior a MXN 1,500 tienen envío gratis. El costo se calcula sobre el subtotal de productos antes de aplicar descuentos.": { en: "Orders with a merchandise subtotal below MXN 1,500 have a MXN 150 shipping fee. Orders with a merchandise subtotal of MXN 1,500 or more ship free. The threshold is based on the merchandise subtotal before discounts.", zh: "商品小计低于 MXN 1,500 的订单收取 MXN 150 运费；商品小计达到或超过 MXN 1,500 的订单免运费。免运费门槛按折扣前的商品小计计算。" },
   "Descuento promocional": { en: "Promotional discount", zh: "促销折扣" },
   "Language": { en: "Language", zh: "语言" },
   "Select language": { en: "Select language", zh: "选择语言" },
