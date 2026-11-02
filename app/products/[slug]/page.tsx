@@ -137,14 +137,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <div className="meta-row"><span>{t("Disponibilidad")}</span><span>{t(product.stock)}</span></div>
           <div className="meta-row"><span>{t("Materiales")}</span><span>{translateProductMaterials(locale, product.translations, product.materials).join(", ")}</span></div>
           <div className="meta-row"><span>{t("Dimensiones")}</span><span>{translateProductField(locale, product.translations, "dimensions", product.dimensions)}</span></div>
-          <div className="meta-row"><span>{t("Envío")}</span><span>{product.shippingFee ? formatPrice(product.shippingFee) : t("Gratis")}</span></div>
+          <div className="meta-row"><span>{t("Envío")}</span><span>{t("MXN 150 en pedidos menores a MXN 1,500; gratis desde MXN 1,500")}</span></div>
           <div className="meta-row"><span>{t("Entrega estimada")}</span><span>{t("10-25 días hábiles")}</span></div>
           <div className="detail-actions">
             <button
               className="primary-button"
               disabled={isOutOfStock}
               onClick={() => {
-                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined, shippingFee: product.shippingFee });
+                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined });
                 // Meta Pixel: AddToCart
                 metaEvents.addToCart({
                   content_name: product.name,
@@ -162,7 +162,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               className="secondary-button"
               disabled={isOutOfStock}
               onClick={() => {
-                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined, shippingFee: product.shippingFee });
+                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined });
                 // Meta Pixel: AddToCart
                 metaEvents.addToCart({
                   content_name: product.name,

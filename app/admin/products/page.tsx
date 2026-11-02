@@ -112,7 +112,7 @@ export default function AdminProductsPage() {
   const editorDialogRef = useRef<HTMLDialogElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState({ name: "", category: "", price: "", shippingFee: "0", inventoryQuantity: "", shortDescription: "", description: "", translations: {} as ProductTranslations, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {} as Record<string, string>, colorPrices: {} as Record<string, string>, gallery: [] as string[], detailImages: [] as string[] });
+  const [draft, setDraft] = useState({ name: "", category: "", price: "", inventoryQuantity: "", shortDescription: "", description: "", translations: {} as ProductTranslations, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {} as Record<string, string>, colorPrices: {} as Record<string, string>, gallery: [] as string[], detailImages: [] as string[] });
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
@@ -166,7 +166,7 @@ export default function AdminProductsPage() {
     setPendingDetailImages([]);
     const primaryImage = product.image_url || gallery[0] || "";
     const detailImages = toStringList(product.detail_images);
-    setDraft({ name: product.name, category: product.category ?? "", price: String(product.price), shippingFee: String(product.shipping_fee ?? 0), inventoryQuantity: String(product.inventory_quantity ?? 0), shortDescription: product.short_description ?? "", description: product.description ?? "", translations: normalizeProductTranslations(product.translations) ?? {}, materials: materials.join(", "), dimensions: product.dimensions ?? "", colors: colors.join(", "), sizes: sizes.join(", "), primaryImage, colorImages, colorPrices, gallery: gallery.filter((image) => image !== primaryImage), detailImages });
+    setDraft({ name: product.name, category: product.category ?? "", price: String(product.price), inventoryQuantity: String(product.inventory_quantity ?? 0), shortDescription: product.short_description ?? "", description: product.description ?? "", translations: normalizeProductTranslations(product.translations) ?? {}, materials: materials.join(", "), dimensions: product.dimensions ?? "", colors: colors.join(", "), sizes: sizes.join(", "), primaryImage, colorImages, colorPrices, gallery: gallery.filter((image) => image !== primaryImage), detailImages });
   };
 
   const beginCreating = () => {
@@ -175,7 +175,7 @@ export default function AdminProductsPage() {
     setSaveError("");
     setPendingPrimaryImages([]);
     setPendingDetailImages([]);
-    setDraft({ name: "", category: "", price: "", shippingFee: "0", inventoryQuantity: "0", shortDescription: "", description: "", translations: {}, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {}, colorPrices: {}, gallery: [], detailImages: [] });
+    setDraft({ name: "", category: "", price: "", inventoryQuantity: "0", shortDescription: "", description: "", translations: {}, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {}, colorPrices: {}, gallery: [], detailImages: [] });
   };
 
   const closeEditor = () => {
@@ -299,7 +299,7 @@ export default function AdminProductsPage() {
           colors: Object.fromEntries(currentColors.flatMap((color) => translation.colors?.[color] ? [[color, translation.colors[color]]] : [])),
         }];
       })) as ProductTranslations;
-      const response = await fetch("/api/admin", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, price: Number(draft.price), shippingFee: Number(draft.shippingFee), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, translations, materials: currentMaterials, dimensions: draft.dimensions, colors: currentColors, sizes, primaryImage: draft.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: draft.gallery, detailImages: draft.detailImages }) });
+      const response = await fetch("/api/admin", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, price: Number(draft.price), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, translations, materials: currentMaterials, dimensions: draft.dimensions, colors: currentColors, sizes, primaryImage: draft.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: draft.gallery, detailImages: draft.detailImages }) });
       const data = await response.json() as { item?: AdminProduct; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error ?? "商品保存失败。");
       let savedProduct = data.item;
@@ -565,7 +565,7 @@ export default function AdminProductsPage() {
           <div className="field-row two-col"><div className="field"><label>材质</label><input value={draft.materials} onChange={(event) => setDraft({ ...draft, materials: event.target.value })} placeholder="用逗号分隔" /></div><div className="field"><label>颜色</label><input value={draft.colors} onChange={(event) => setDraft({ ...draft, colors: event.target.value })} placeholder="用逗号分隔" /></div></div>
           {draftColors.length > 0 ? <div className="field"><label>颜色单独价格（MXN）</label><div className="color-primary-images-grid">{draftColors.map((color) => <label className="color-primary-image" key={`${color}-price`}><span>{color}</span><input type="number" min="0.01" step="0.01" value={draft.colorPrices[color] ?? ""} placeholder={`默认 ${draft.price || "价格"}`} onChange={(event) => setDraft((current) => ({ ...current, colorPrices: { ...current.colorPrices, [color]: event.target.value } }))} /></label>)}</div></div> : null}
           <div className="field-row two-col"><div className="field"><label>尺寸描述</label><input value={draft.dimensions} onChange={(event) => setDraft({ ...draft, dimensions: event.target.value })} placeholder="例如：长 30 × 宽 20 cm" /></div><div className="field"><label>尺码选项</label><input value={draft.sizes} onChange={(event) => setDraft({ ...draft, sizes: event.target.value })} placeholder="例如：S, M, L, XL；不适用可留空" /></div></div>
-          <div className="field"><label>每件商品运费（MXN）</label><input type="number" min="0" step="0.01" value={draft.shippingFee} onChange={(event) => setDraft({ ...draft, shippingFee: event.target.value })} /></div>
+          <div className="field"><label>运费规则</label><p>订单商品金额低于 MXN 1,500 收取 MXN 150；达到 MXN 1,500 免运费。</p></div>
           </section>
         </dialog> : null}
       </div>

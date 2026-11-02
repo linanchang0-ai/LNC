@@ -4,6 +4,7 @@ import { createPayPalOrder } from "@/lib/paypal-client";
 import { getCatalogProducts } from "@/lib/catalog";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { rateLimit } from "@/lib/rate-limit";
+import { getShippingCost } from "@/lib/shipping";
 
 function requestCookies(request: Request) {
   return request.headers.get("cookie")?.split(";").map((part) => {
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "El catálogo de producción no está disponible para aceptar pedidos." }, { status: 503 });
     }
     const subtotal = requestedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const shipping = requestedItems.reduce((sum, item) => sum + (item.product?.shippingFee ?? 0) * item.quantity, 0);
+    const shipping = getShippingCost(subtotal);
     const database = getSupabaseServerClient();
     if (!database) return NextResponse.json({ error: "No se pudo conectar con la base de datos para iniciar el pedido." }, { status: 503 });
     let couponCode: string | null = null;

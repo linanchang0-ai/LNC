@@ -195,6 +195,7 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Ir a pagar": { en: "Proceed to checkout", zh: "前往结账" },
   "Agrega {amount} para obtener envío gratis": { en: "Add {amount} to get free shipping", zh: "再购买 {amount} 即可享受免运费" },
   "ENVÍO GRATIS DESBLOQUEADO": { en: "FREE SHIPPING UNLOCKED", zh: "已解锁免运费" },
+  "MXN 150 en pedidos menores a MXN 1,500; gratis desde MXN 1,500": { en: "MXN 150 shipping on orders under MXN 1,500; free on orders of MXN 1,500 or more", zh: "订单金额低于 MXN 1,500 收取 MXN 150 运费；满 MXN 1,500 免运费" },
   "Descuento promocional": { en: "Promotional discount", zh: "促销折扣" },
   "Language": { en: "Language", zh: "语言" },
   "Select language": { en: "Select language", zh: "选择语言" },

@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { ProductTranslations } from "@/lib/product-translations";
+import { getShippingCost } from "@/lib/shipping";
 
 export type CartItem = {
   id: string | number;
@@ -20,7 +21,6 @@ export type CartItem = {
   image: string;
   color?: string;
   size?: string;
-  shippingFee?: number;
   quantity: number;
 };
 
@@ -109,10 +109,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => items.reduce((total, item) => total + item.price * item.quantity, 0),
     [items],
   );
-  const shipping = useMemo(
-    () => items.reduce((total, item) => total + (item.shippingFee ?? 0) * item.quantity, 0),
-    [items],
-  );
+  const shipping = useMemo(() => getShippingCost(subtotal), [subtotal]);
   const discount = Math.min(subtotal, coupon?.discount ?? 0);
   const total = subtotal + shipping - discount;
   const itemCount = items.reduce((count, item) => count + item.quantity, 0);

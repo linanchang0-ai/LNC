@@ -6,16 +6,15 @@ import { formatPrice } from "@/data/products";
 import { useState } from "react";
 import { useI18n } from "@/components/locale-provider";
 import { translateProductColor, translateProductField } from "@/lib/i18n";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 
 export default function CartPage() {
   const { t, locale } = useI18n();
   const { items, subtotal, shipping, updateQuantity, removeFromCart } = useCart();
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
-  const freeShippingThreshold = 2500;
-  const freeShippingProgress = Math.min(100, (subtotal / freeShippingThreshold) * 100);
-  const shippingCost = subtotal >= freeShippingThreshold ? 0 : shipping;
-  const finalTotal = subtotal + shippingCost - discount;
+  const freeShippingProgress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
+  const finalTotal = subtotal + shipping - discount;
 
   return (
     <div className="container-shell cart-shell" style={{ padding: "24px 0 40px" }}>
@@ -71,8 +70,8 @@ export default function CartPage() {
           </div>
           <h3 style={{ marginTop: 0 }}>{t("Resumen del pedido")}</h3>
           <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
-          <div className="free-shipping-box"><strong>{subtotal >= freeShippingThreshold ? t("ENVÍO GRATIS DESBLOQUEADO") : t("Agrega {amount} para obtener envío gratis").replace("{amount}", formatPrice(Math.max(0, freeShippingThreshold - subtotal)))}</strong><div className="shipping-progress"><span style={{ width: `${freeShippingProgress}%` }} /></div></div>
-          <div className="meta-row"><span>{t("Envío")}</span><span>{shippingCost ? formatPrice(shippingCost) : t("GRATIS")}</span></div>
+          <div className="free-shipping-box"><strong>{subtotal >= FREE_SHIPPING_THRESHOLD ? t("ENVÍO GRATIS DESBLOQUEADO") : t("Agrega {amount} para obtener envío gratis").replace("{amount}", formatPrice(Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)))}</strong><div className="shipping-progress"><span style={{ width: `${freeShippingProgress}%` }} /></div></div>
+          <div className="meta-row"><span>{t("Envío")}</span><span>{shipping ? formatPrice(shipping) : t("GRATIS")}</span></div>
           <div className="meta-row"><span>{t("Descuento")}</span><span>—</span></div>
           <div className="coupon-row"><input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder={t("Código promocional")} /><button type="button" onClick={() => setDiscount(coupon.trim().toUpperCase() === "LNCSPORTS10" ? Math.round(subtotal * 0.1) : 0)}>{t("Aplicar")}</button></div>
           {discount > 0 ? <div className="meta-row"><span>{t("Descuento promocional")}</span><span>-{formatPrice(discount)}</span></div> : null}
