@@ -200,8 +200,8 @@ export default function AdminProductsPage() {
     });
   };
 
-  const handleDetailImagePointerDown = (event: PointerEvent<HTMLButtonElement>, index: number) => {
-    if (event.button !== 0 || uploading || saving) return;
+  const handleDetailImagePointerDown = (event: PointerEvent<HTMLDivElement>, index: number) => {
+    if (event.button !== 0 || uploading || saving || (event.target instanceof Element && event.target.closest("button"))) return;
     event.preventDefault();
     detailImageDragRef.current = { fromIndex: index, toIndex: index, pointerId: event.pointerId };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -209,7 +209,7 @@ export default function AdminProductsPage() {
     setDropDetailImageIndex(index);
   };
 
-  const handleDetailImagePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+  const handleDetailImagePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const drag = detailImageDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-detail-image-index]");
@@ -220,7 +220,7 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleDetailImagePointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
+  const handleDetailImagePointerEnd = (event: PointerEvent<HTMLDivElement>) => {
     const drag = detailImageDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     if (drag.fromIndex !== drag.toIndex) moveDetailImage(drag.fromIndex, drag.toIndex);
@@ -481,23 +481,16 @@ export default function AdminProductsPage() {
               <div className="product-image-strip-row">
                 <div className="product-image-strip" aria-label="商品详情图">
                   {draft.detailImages.map((image, index) => <div
-                    className={`product-image-item${draggedDetailImageIndex === index ? " is-dragging" : ""}${dropDetailImageIndex === index && draggedDetailImageIndex !== index ? " is-drop-target" : ""}`}
+                    className={`product-image-item${draggedDetailImageIndex === index ? " is-dragging" : ""}${dropDetailImageIndex === index && draggedDetailImageIndex !== index ? " is-drop-target" : ""}${!uploading && !saving ? " is-draggable" : ""}`}
                     key={`${image}-${index}`}
                     data-detail-image-index={index}
+                    onPointerDown={(event) => handleDetailImagePointerDown(event, index)}
+                    onPointerMove={handleDetailImagePointerMove}
+                    onPointerUp={handleDetailImagePointerEnd}
+                    onPointerCancel={handleDetailImagePointerEnd}
                   >
-                    <div className="product-image-thumb"><img src={image} alt={`${draft.name} 的详情图 ${index + 1}`} /><button type="button" className="product-image-remove" onClick={() => removeImage(index)} aria-label={`删除详情图 ${index + 1}`} title={`删除详情图 ${index + 1}`}>×</button></div>
+                    <div className="product-image-thumb"><img src={image} alt={`${draft.name} 的详情图 ${index + 1}`} draggable={false} /><button type="button" className="product-image-remove" onClick={() => removeImage(index)} aria-label={`删除详情图 ${index + 1}`} title={`删除详情图 ${index + 1}`}>×</button></div>
                     <div className="product-image-order">
-                      <button
-                        type="button"
-                        className="product-image-drag-handle"
-                        onPointerDown={(event) => handleDetailImagePointerDown(event, index)}
-                        onPointerMove={handleDetailImagePointerMove}
-                        onPointerUp={handleDetailImagePointerEnd}
-                        onPointerCancel={handleDetailImagePointerEnd}
-                        disabled={uploading || saving}
-                        aria-label={`按住拖动详情图 ${index + 1}`}
-                        title="按住拖动调整位置"
-                      >⠿</button>
                       <button type="button" onClick={() => moveDetailImage(index, index - 1)} disabled={index === 0 || uploading || saving} aria-label={`详情图 ${index + 1} 上移`} title="上移">↑</button>
                       <span>{index + 1}</span>
                       <button type="button" onClick={() => moveDetailImage(index, index + 1)} disabled={index === draft.detailImages.length - 1 || uploading || saving} aria-label={`详情图 ${index + 1} 下移`} title="下移">↓</button>
