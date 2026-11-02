@@ -222,7 +222,7 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Ver imagen": { en: "View image", zh: "查看图片" },
   "de": { en: "of", zh: "/" },
   "miniatura": { en: "thumbnail", zh: "缩略图" },
-  "10-25 días hábiles": { en: "10–25 business days", zh: "10–25 个工作日" },
+  "Aproximadamente 9-15 días": { en: "Approximately 9–15 days", zh: "约 9–15 天" },
   "Pago seguro con PayPal": { en: "Secure payment with PayPal", zh: "通过 PayPal 安全支付" },
   "Compra protegida": { en: "Protected purchase", zh: "购物保障" },
   "Envío a todo México": { en: "Shipping throughout Mexico", zh: "墨西哥全境配送" },

@@ -138,7 +138,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <div className="meta-row"><span>{t("Materiales")}</span><span>{translateProductMaterials(locale, product.translations, product.materials).join(", ")}</span></div>
           <div className="meta-row"><span>{t("Dimensiones")}</span><span>{translateProductField(locale, product.translations, "dimensions", product.dimensions)}</span></div>
           <div className="meta-row"><span>{t("Envío")}</span><span>{t("MXN 150 en pedidos menores a MXN 1,500; gratis desde MXN 1,500")}</span></div>
-          <div className="meta-row"><span>{t("Entrega estimada")}</span><span>{t("10-25 días hábiles")}</span></div>
+          <div className="meta-row"><span>{t("Entrega estimada")}</span><span>{t("Aproximadamente 9-15 días")}</span></div>
           <div className="detail-actions">
             <button
               className="primary-button"
