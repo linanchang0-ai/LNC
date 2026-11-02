@@ -32,8 +32,10 @@ export default function CheckoutPage() {
   const [captureMessage, setCaptureMessage] = useState("");
   const [confirmedOrderNumber, setConfirmedOrderNumber] = useState("");
   const [expressError, setExpressError] = useState("");
+  const [checkoutStep, setCheckoutStep] = useState<"details" | "payment">("details");
   const checkoutTracked = useRef(false);
   const captureAttemptedOrderRef = useRef<string | null>(null);
+  const checkoutPanelRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const checkoutData: CheckoutDraftInput = {
     customerName: `${form.name} ${form.lastName}`.trim(),
@@ -42,6 +44,10 @@ export default function CheckoutPage() {
     shippingAddress: { state: form.state, city: form.city, postalCode: form.postalCode, neighborhood: form.neighborhood, street: form.street, number: form.number },
   };
   const checkoutDetailsComplete = Object.values(checkoutData.shippingAddress).every(Boolean) && Boolean(checkoutData.customerName && checkoutData.email && checkoutData.phone);
+
+  useEffect(() => {
+    checkoutPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [checkoutStep]);
 
   const handleExpressSuccess = (orderNumber: string) => {
     clearCart();
@@ -60,6 +66,20 @@ export default function CheckoutPage() {
       name: name || current.name,
       lastName: lastNameParts.join(" ") || current.lastName,
     }));
+  };
+
+  const handleCheckoutSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (cartIsEmpty) {
+      setCaptureMessage(t("Tu carrito está vacío. Agrega un producto antes de pagar."));
+      return;
+    }
+    if (couponPending) {
+      setCaptureMessage(t("Validando el cupón..."));
+      return;
+    }
+    setCaptureMessage("");
+    setCheckoutStep("payment");
   };
 
   useEffect(() => {
@@ -169,130 +189,152 @@ export default function CheckoutPage() {
       <div className="page-hero compact-hero">
         <span className="eyebrow subdued">{t("Pago seguro")}</span>
         <h1>{t("Completa tu pedido")}</h1>
-        <p>{t("Compra de forma rápida y segura sin crear una cuenta.")}</p>
+        <p>{t(checkoutStep === "details" ? "Primero, dinos dónde entregar tu pedido." : "Revisa tus datos y elige cómo pagar.")}</p>
         {captureMessage ? <p className="checkout-status" role="status">{captureMessage}{confirmedOrderNumber ? <> {t("Número de pedido")}: <strong>{confirmedOrderNumber}</strong></> : null}</p> : null}
       </div>
 
       <div className="checkout-steps" aria-label={t("Progreso del pago")}>
-        <span className="is-active">1. {t("Información de contacto")}</span>
-        <span className="is-active">2. {t("Información de envío")}</span>
-        <span>3. {t("Pago")}</span>
-        <span>4. {t("Revisión")}</span>
+        <span className="is-active">1. {t("Información de contacto y entrega")}</span>
+        <span className={checkoutStep === "payment" ? "is-active" : undefined}>2. {t("Pago y revisión")}</span>
       </div>
 
-      <form className="form-shell checkout-form" onSubmit={handlePayPalCheckout}>
-        <div className="form-card checkout-card">
-          <AddressPasteAssist onRecognize={handleAddressRecognize} />
-          <div className="checkout-section">
+      {checkoutStep === "details" ? (
+        <form className="form-shell checkout-form checkout-form--details" onSubmit={handleCheckoutSubmit}>
+          <div className="form-card checkout-card" ref={checkoutPanelRef}>
             <p className="guest-checkout-note">{t("Puedes comprar como invitado. No necesitas crear una cuenta.")}</p>
-            <h3>{t("Información de contacto")}</h3>
-            <div className="field-row two-col">
-              <div className="field">
-                <label>{t("Nombre")}</label>
-                <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+            <AddressPasteAssist onRecognize={handleAddressRecognize} />
+            <div className="checkout-section">
+              <h3>{t("Información de contacto")}</h3>
+              <div className="field-row two-col">
+                <div className="field">
+                  <label>{t("Nombre")}</label>
+                  <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="given-name" required />
+                </div>
+                <div className="field">
+                  <label>{t("Apellidos")}</label>
+                  <input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} autoComplete="family-name" required />
+                </div>
               </div>
-              <div className="field">
-                <label>{t("Apellidos")}</label>
-                <input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required />
-              </div>
-            </div>
-            <div className="field-row two-col">
-              <div className="field">
-                <label>{t("Correo electrónico")}</label>
-                <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
-              </div>
-              <div className="field">
-                <label>{t("Teléfono")}</label>
-                <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required />
-              </div>
-            </div>
-          </div>
-
-          <div className="checkout-section">
-            <h3>{t("Información de envío")}</h3>
-            <div className="field-row two-col">
-              <div className="field">
-                <label>{t("Estado")}</label>
-                <input value={form.state} onChange={(event) => setForm({ ...form, state: event.target.value })} required />
-              </div>
-              <div className="field">
-                <label>{t("Ciudad")}</label>
-                <input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} required />
+              <div className="field-row two-col">
+                <div className="field">
+                  <label>{t("Correo electrónico")}</label>
+                  <input type="email" autoComplete="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+                </div>
+                <div className="field">
+                  <label>{t("Teléfono")}</label>
+                  <input type="tel" autoComplete="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required />
+                </div>
               </div>
             </div>
-            <div className="field-row two-col">
-              <div className="field">
-                <label>{t("Código postal")}</label>
-                <input value={form.postalCode} onChange={(event) => setForm({ ...form, postalCode: event.target.value })} required />
+
+            <div className="checkout-section">
+              <h3>{t("Información de envío")}</h3>
+              <div className="field-row two-col">
+                <div className="field">
+                  <label>{t("Estado")}</label>
+                  <input autoComplete="address-level1" value={form.state} onChange={(event) => setForm({ ...form, state: event.target.value })} required />
+                </div>
+                <div className="field">
+                  <label>{t("Ciudad")}</label>
+                  <input autoComplete="address-level2" value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} required />
+                </div>
               </div>
-              <div className="field">
-                <label>{t("Colonia")}</label>
-                <input value={form.neighborhood} onChange={(event) => setForm({ ...form, neighborhood: event.target.value })} required />
+              <div className="field-row two-col">
+                <div className="field">
+                  <label>{t("Código postal")}</label>
+                  <input autoComplete="postal-code" value={form.postalCode} onChange={(event) => setForm({ ...form, postalCode: event.target.value })} required />
+                </div>
+                <div className="field">
+                  <label>{t("Colonia")}</label>
+                  <input autoComplete="address-line2" value={form.neighborhood} onChange={(event) => setForm({ ...form, neighborhood: event.target.value })} required />
+                </div>
+              </div>
+              <div className="field-row two-col">
+                <div className="field">
+                  <label>{t("Calle")}</label>
+                  <input autoComplete="address-line1" value={form.street} onChange={(event) => setForm({ ...form, street: event.target.value })} required />
+                </div>
+                <div className="field">
+                  <label>{t("Número")}</label>
+                  <input value={form.number} onChange={(event) => setForm({ ...form, number: event.target.value })} required />
+                </div>
               </div>
             </div>
-            <div className="field-row two-col">
-              <div className="field">
-                <label>{t("Calle")}</label>
-                <input value={form.street} onChange={(event) => setForm({ ...form, street: event.target.value })} required />
-              </div>
-              <div className="field">
-                <label>{t("Número")}</label>
-                <input value={form.number} onChange={(event) => setForm({ ...form, number: event.target.value })} required />
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <aside className="summary-card order-summary">
-          <div className="summary-topline">
-            <span className="eyebrow subdued">{t("Pago")}</span>
-          </div>
-          <h3 style={{ marginTop: 0 }}>{t("Pedido seguro")}</h3>
-          <div className="secure-note">
-            <strong>{t("Pago seguro")}</strong>
-            <div>{t("Aceptamos PayPal, Apple Pay y Google Pay. Tus datos están protegidos con cifrado SSL.")}</div>
-          </div>
-
-          <p className="checkout-delivery-note">{t("Envíos a México: la entrega es estimada y puede variar por procesamiento, paquetería, aduanas y destino.")}</p>
-
-          <ExpressCheckout onSuccess={handleExpressSuccess} onError={setExpressError} checkoutData={checkoutData} disabled={!checkoutDetailsComplete || cartIsEmpty || couponPending} />
-          {expressError ? <p style={{ color: "#dc2626", fontSize: 14, margin: "8px 0" }} role="alert">{expressError}</p> : null}
-
-          <div className="checkout-item-list">
-            {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`}>
-              <span>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
-              <span>{formatPrice(item.price * item.quantity)}</span>
-            </div>)}
-          </div>
-          <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
-          {discount > 0 ? <div className="meta-row"><span>{t("Descuento")} {couponCode ? `(${couponCode})` : ""}</span><span>-{formatPrice(discount)}</span></div> : null}
-          {couponPending ? <p className="checkout-status" role="status">{t("Validando el cupón...")}</p> : null}
-          {couponError ? <p className="checkout-status" role="status">{t(couponError)}</p> : null}
-          <div className="meta-row"><span>{t("Envío")}</span><span>{formatPrice(shipping)}</span></div>
-          <div className="total-row"><span>{t("Total")}</span><span>{formatPrice(total)}</span></div>
-          <div style={{ marginTop: 18 }}>
-            <button
-              className="primary-button"
-              style={{ width: "100%" }}
-              type="submit"
-              disabled={loading || cartIsEmpty || !checkoutDetailsComplete || couponPending}
-              onClick={() => {
-                if (cartIsEmpty) {
-                  alert(t("Tu carrito está vacío. Agrega un producto antes de pagar."));
-                }
-              }}
-            >
-              {loading ? t("Procesando...") : t("Pagar con PayPal")}
+            {couponPending ? <p className="checkout-status" role="status">{t("Validando el cupón...")}</p> : null}
+            {couponError ? <p className="checkout-status" role="status">{t(couponError)}</p> : null}
+            {captureMessage ? <p className="checkout-status" role="alert">{captureMessage}</p> : null}
+            <button className="primary-button checkout-continue-button" type="submit" disabled={cartIsEmpty || couponPending}>
+              {t("Continuar al pago")}
             </button>
           </div>
-          <p className="checkout-terms">{t("Al realizar tu pedido, confirmas que has revisado y aceptado nuestros")} <Link href="/terms">{t("Términos y condiciones")}</Link>, <Link href="/shipping">{t("Política de envíos")}</Link> y <Link href="/returns-policy">{t("Política de devoluciones")}</Link>.</p>
-          <div style={{ marginTop: 12 }}>
-            <Link href="/returns-policy" className="ghost-button" style={{ width: "100%" }}>
-              {t("Política de devoluciones")}
-            </Link>
-          </div>
-        </aside>
-      </form>
+
+          <aside className="summary-card order-summary checkout-order-summary">
+            <span className="eyebrow subdued">{t("Resumen")}</span>
+            <h3 style={{ marginTop: 0 }}>{t("Resumen del pedido")}</h3>
+            <div className="checkout-item-list">
+              {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`}>
+                <span>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
+                <span>{formatPrice(item.price * item.quantity)}</span>
+              </div>)}
+            </div>
+            <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
+            {discount > 0 ? <div className="meta-row"><span>{t("Descuento")} {couponCode ? `(${couponCode})` : ""}</span><span>-{formatPrice(discount)}</span></div> : null}
+            <div className="meta-row"><span>{t("Envío")}</span><span>{formatPrice(shipping)}</span></div>
+            <div className="total-row"><span>{t("Total")}</span><span>{formatPrice(total)}</span></div>
+          </aside>
+        </form>
+      ) : (
+        <form className="form-shell checkout-form checkout-form--payment" onSubmit={handlePayPalCheckout}>
+          <section className="summary-card order-summary checkout-payment-panel" ref={checkoutPanelRef} aria-labelledby="checkout-payment-heading">
+            <div className="checkout-customer-review">
+              <div>
+                <span className="eyebrow subdued">{t("Información de entrega")}</span>
+                <h3>{checkoutData.customerName}</h3>
+                <p>{checkoutData.email} · {checkoutData.phone}</p>
+                <p>{checkoutData.shippingAddress.street} {checkoutData.shippingAddress.number}, {checkoutData.shippingAddress.neighborhood}, {checkoutData.shippingAddress.city}, {checkoutData.shippingAddress.state}, {checkoutData.shippingAddress.postalCode}</p>
+              </div>
+              <button type="button" className="ghost-button" onClick={() => setCheckoutStep("details")}>{t("Editar datos")}</button>
+            </div>
+
+            <div className="checkout-payment-options">
+              <span className="eyebrow subdued">{t("Paso 2 de 2")}</span>
+              <h3 id="checkout-payment-heading">{t("Elige cómo pagar")}</h3>
+              <div className="secure-note">
+                <strong>{t("Pago seguro")}</strong>
+                <div>{t("Aceptamos PayPal, Apple Pay y Google Pay. Tus datos están protegidos con cifrado SSL.")}</div>
+              </div>
+
+              <p className="checkout-delivery-note">{t("Envíos a México: la entrega es estimada y puede variar por procesamiento, paquetería, aduanas y destino.")}</p>
+
+              <ExpressCheckout onSuccess={handleExpressSuccess} onError={setExpressError} checkoutData={checkoutData} disabled={!checkoutDetailsComplete || cartIsEmpty || couponPending} />
+              {expressError ? <p style={{ color: "#dc2626", fontSize: 14, margin: "8px 0" }} role="alert">{expressError}</p> : null}
+
+              <div className="checkout-item-list">
+                {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`}>
+                  <span>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
+                  <span>{formatPrice(item.price * item.quantity)}</span>
+                </div>)}
+              </div>
+              <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
+              {discount > 0 ? <div className="meta-row"><span>{t("Descuento")} {couponCode ? `(${couponCode})` : ""}</span><span>-{formatPrice(discount)}</span></div> : null}
+              <div className="meta-row"><span>{t("Envío")}</span><span>{formatPrice(shipping)}</span></div>
+              <div className="total-row"><span>{t("Total")}</span><span>{formatPrice(total)}</span></div>
+              <div style={{ marginTop: 18 }}>
+                <button className="primary-button" style={{ width: "100%" }} type="submit" disabled={loading || cartIsEmpty || !checkoutDetailsComplete || couponPending}>
+                  {loading ? t("Procesando...") : t("Pagar con PayPal")}
+                </button>
+              </div>
+              <p className="checkout-terms">{t("Al realizar tu pedido, confirmas que has revisado y aceptado nuestros")} <Link href="/terms">{t("Términos y condiciones")}</Link>, <Link href="/shipping">{t("Política de envíos")}</Link> y <Link href="/returns-policy">{t("Política de devoluciones")}</Link>.</p>
+              <div style={{ marginTop: 12 }}>
+                <Link href="/returns-policy" className="ghost-button" style={{ width: "100%" }}>
+                  {t("Política de devoluciones")}
+                </Link>
+              </div>
+            </div>
+          </section>
+        </form>
+      )}
     </div>
   );
 }

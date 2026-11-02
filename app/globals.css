@@ -2673,6 +2673,43 @@ th {
 
 .checkout-card {
   padding: 22px;
+  scroll-margin-top: 140px;
+}
+
+.checkout-form--payment {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.checkout-payment-panel {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  position: static;
+  scroll-margin-top: 140px;
+}
+
+.checkout-continue-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.checkout-customer-review {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.checkout-customer-review h3,
+.checkout-customer-review p {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.checkout-payment-options {
+  padding-top: 22px;
 }
 
 .editorial-strip {
@@ -3668,6 +3705,14 @@ th {
   .cart-layout,
   .checkout-form {
     grid-template-columns: 1fr;
+  }
+
+  .checkout-customer-review {
+    flex-direction: column;
+  }
+
+  .checkout-customer-review .ghost-button {
+    width: 100%;
   }
 
   .detail-panel,
