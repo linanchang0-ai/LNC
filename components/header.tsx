@@ -65,7 +65,7 @@ export function Header() {
   const [coupon, setCoupon] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-  const searchResults = products.filter((product) => `${product.name} ${product.category} ${product.shortDescription}`.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 6);
+  const searchResults = products.filter((product) => `${product.name} ${t(product.name)} ${product.category} ${t(product.category)} ${product.shortDescription} ${t(product.shortDescription)}`.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 6);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 12);
@@ -235,7 +235,7 @@ export function Header() {
 
       <div className={`cart-drawer-backdrop ${cartOpen ? "is-open" : ""}`} onClick={() => setCartOpen(false)} />
       <aside className={`cart-drawer ${cartOpen ? "is-open" : ""}`} aria-label={t("Bolsa de compras")}>
-        {addedProduct ? <div className="added-confirmation">{t("Añadido a tu carrito")} <span>✓</span><small>{addedProduct}</small></div> : null}
+        {addedProduct ? <div className="added-confirmation">{t("Añadido a tu carrito")} <span>✓</span><small>{t(addedProduct)}</small></div> : null}
         <div className="cart-drawer-header">
           <div><span className="eyebrow subdued">{t("Tu selección")}</span><h2>{t("Carrito")} ({itemCount})</h2></div>
           <button type="button" onClick={() => setCartOpen(false)} aria-label={t("Cerrar bolsa")}>×</button>
@@ -247,8 +247,8 @@ export function Header() {
             <div className="cart-drawer-items">
               {items.map((item) => (
                 <div key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`} className="cart-drawer-item">
-                  <img src={item.image} alt={item.name} />
-                  <div><strong>{item.name}</strong><span>{formatPrice(item.price)}</span>{item.color ? <span>{t("Color:")} {item.color}</span> : null}{item.size ? <span>{t("Talla:")} {item.size}</span> : null}<div className="drawer-quantity"><button type="button" onClick={() => updateQuantity(item.id, item.color, item.size, -1)} aria-label={t("Reducir cantidad")}>−</button><span>{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, item.color, item.size, 1)} aria-label={t("Aumentar cantidad")}>+</button><button type="button" onClick={() => removeFromCart(item.id, item.color, item.size)} aria-label={`${t("Eliminar")} ${item.name}`}>{t("Eliminar")}</button></div></div>
+                  <img src={item.image} alt={t(item.name)} />
+                  <div><strong>{t(item.name)}</strong><span>{formatPrice(item.price)}</span>{item.color ? <span>{t("Color:")} {t(item.color)}</span> : null}{item.size ? <span>{t("Talla:")} {t(item.size)}</span> : null}<div className="drawer-quantity"><button type="button" onClick={() => updateQuantity(item.id, item.color, item.size, -1)} aria-label={t("Reducir cantidad")}>−</button><span>{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, item.color, item.size, 1)} aria-label={t("Aumentar cantidad")}>+</button><button type="button" onClick={() => removeFromCart(item.id, item.color, item.size)} aria-label={`${t("Eliminar")} ${t(item.name)}`}>{t("Eliminar")}</button></div></div>
                 </div>
               ))}
             </div>
@@ -262,7 +262,7 @@ export function Header() {
           <div className="search-overlay-top"><span>{t("Buscar")}</span><button type="button" onClick={() => setSearchOpen(false)} aria-label={t("Cerrar búsqueda")}>×</button></div>
           <input autoFocus={searchOpen} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder={t("Buscar productos...")} />
           <div className="search-results">
-            {!searchTerm ? <p>{t("Busca por nombre o categoría.")}</p> : searchResults.length === 0 ? <p>{t("No encontramos productos.")}</p> : searchResults.map((product) => <Link key={product.id} href={`/products/${product.slug}`} onClick={() => setSearchOpen(false)}><img src={product.image} alt="" /><span><strong>{product.name}</strong><small>{formatPrice(product.price)}</small></span></Link>)}
+            {!searchTerm ? <p>{t("Busca por nombre o categoría.")}</p> : searchResults.length === 0 ? <p>{t("No encontramos productos.")}</p> : searchResults.map((product) => <Link key={product.id} href={`/products/${product.slug}`} onClick={() => setSearchOpen(false)}><img src={product.image} alt="" /><span><strong>{t(product.name)}</strong><small>{formatPrice(product.price)}</small></span></Link>)}
           </div>
         </div>
       </div>

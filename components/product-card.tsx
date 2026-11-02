@@ -9,6 +9,7 @@ export function ProductCard({ product }: { product: Product }) {
   const { t } = useI18n();
   const { addToCart } = useCart();
   const isOutOfStock = product.stock.toLowerCase().includes("agotado");
+  const productName = t(product.name);
 
   const addProduct = () => {
     if (isOutOfStock) return;
@@ -24,8 +25,8 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className={`product-card ${isOutOfStock ? "is-out-of-stock" : ""}`}>
       <div className="product-image-wrap">
-        <Link href={`/products/${product.slug}`} className="product-image-link" aria-label={`${t("Ver")} ${product.name}`}>
-          <img src={product.image} alt={product.name} />
+        <Link href={`/products/${product.slug}`} className="product-image-link" aria-label={`${t("Ver")} ${productName}`}>
+          <img src={product.image} alt={productName} />
         </Link>
         <div className="product-card-topline">
           {product.badge ? <span className="badge">{product.badge === "Best Seller" ? t("Más vendido") : product.badge === "Limited" ? t("Edición limitada") : product.badge}</span> : null}
@@ -37,8 +38,8 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
       <div className="product-body">
-        <h3><Link href={`/products/${product.slug}`}>{product.name}</Link></h3>
-        <p>{product.shortDescription}</p>
+        <h3><Link href={`/products/${product.slug}`}>{productName}</Link></h3>
+        <p>{t(product.shortDescription)}</p>
         <div className="product-rating" aria-label={t("5 de 5 estrellas")}>
           <span aria-hidden="true">★★★★★</span><span>5.0</span>
         </div>

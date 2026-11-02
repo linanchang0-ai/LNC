@@ -240,7 +240,7 @@ export default function CheckoutPage() {
 
           <div className="checkout-item-list">
             {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`}>
-              <span>{item.name}{item.color ? ` · ${item.color}` : ""}{item.size ? ` · ${t("Talla")} ${item.size}` : ""} × {item.quantity}</span>
+              <span>{t(item.name)}{item.color ? ` · ${t(item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
               <span>{formatPrice(item.price * item.quantity)}</span>
             </div>)}
           </div>

@@ -63,7 +63,7 @@ export default function OrderLookupPage() {
       <div className="meta-row"><span>{t("Guía")}</span><span>{order.tracking_number ? <TrackingLink carrier={order.shipping_carrier} trackingNumber={order.tracking_number} /> : t("Se asignará al enviar")}</span></div>
       {order.shipped_at ? <div className="meta-row"><span>{t("Enviado")}</span><span>{new Date(order.shipped_at).toLocaleDateString(locale === "zh" ? "zh-CN" : locale === "en" ? "en-US" : "es-MX")}</span></div> : null}
       <h2 style={{ marginTop: 22 }}>{t("Productos")}</h2>
-      {order.items.map((item, index) => <div className="meta-row" key={`${item.product_name}-${index}`}><span>{item.product_name ?? t("Producto")} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
+      {order.items.map((item, index) => <div className="meta-row" key={`${item.product_name}-${index}`}><span>{item.product_name ? t(item.product_name) : t("Producto")} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
     </section> : null}
   </div>;
 }

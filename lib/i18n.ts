@@ -3,6 +3,18 @@ export type Locale = "en" | "zh" | "es";
 export const supportedLocales: Locale[] = ["en", "zh", "es"];
 
 const translations: Record<string, Partial<Record<Locale, string>>> = {
+  "Camiseta de fútbol": { en: "Soccer jerseys", zh: "足球球衣" },
+  "camiseta-de-futbol": { en: "Soccer jerseys", zh: "足球球衣" },
+  "Explora nuestra colección de Camiseta de fútbol.": { en: "Explore our soccer jersey collection.", zh: "探索我们的足球球衣系列。" },
+  "Productos seleccionados en Camiseta de fútbol.": { en: "A curated selection of soccer jerseys.", zh: "精选足球球衣。" },
+  "Camiseta de local de México 2026, tallas S-4XL, edición jugador（球员2026墨西哥主场S-4XL）": { en: "Mexico 2026 Home Jersey, S–4XL, Player Edition", zh: "2026 墨西哥主场球衣，S–4XL 球员版" },
+  "Camiseta de local de la Selección Mexicana, diseño con motivos aztecas, transpirable, ideal para hinchas.": { en: "Mexico national team home jersey with Aztec-inspired details. Breathable and made for fans.", zh: "墨西哥国家队主场球衣，融入阿兹特克风格图案。透气舒适，适合球迷穿着。" },
+  "Camiseta de fútbol de local de la Selección Nacional de México. Cuenta con un diseño exclusivo inspirado en la cultura azteca y el calendario maya, con el color verde icónico del equipo.\nFabricada en tela ligera y transpirable, que evacúa el sudor para mantenerte fresco durante el partido o en el día a día. Cuello y puños con acabado rojo y blanco, escudo de México y logo adidas estampados.\nPerfecta para usar en los partidos, entrenamientos o como prenda casual para demostrar tu pasión por el Tri. Disponible en varias tallas.": { en: "Mexico national team home football jersey featuring an exclusive design inspired by Aztec culture and the Mayan calendar, in the team's iconic green.\nMade from lightweight, breathable, moisture-wicking fabric to help keep you cool during matches or everyday wear. Finished with red-and-white collar and cuffs, and printed with the Mexico crest and adidas logo.\nPerfect for matches, training, or casual wear to show your support for El Tri. Available in multiple sizes.", zh: "墨西哥国家队主场足球球衣，采用受阿兹特克文化和玛雅历法启发的专属设计，呈现球队标志性的绿色。\n采用轻盈透气、帮助排汗的面料，让你在比赛或日常穿着时保持清爽。红白配色领口和袖口，并印有墨西哥队徽与 adidas 标志。\n适合比赛、训练或日常穿着，展现你对墨西哥队的支持。多种尺码可选。" },
+  "fibra de poliéster especial": { en: "Special polyester fiber", zh: "特制聚酯纤维" },
+  "verde": { en: "Green", zh: "绿色" },
+  "En stock": { en: "In stock", zh: "有货" },
+  "Pocas unidades": { en: "Only a few left", zh: "库存不多" },
+  "detalle": { en: "detail", zh: "细节" },
   "Comprar": { en: "Shop", zh: "购物" },
   "Colecciones": { en: "Collections", zh: "系列" },
   "Destacados": { en: "Featured", zh: "精选" },

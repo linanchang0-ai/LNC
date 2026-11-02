@@ -42,7 +42,7 @@ export default async function HomePage() {
               const categoryImage = category.image || products.find((product) => product.category === category.slug)?.image || products[index % products.length]?.image;
               return <Link key={category.slug} href={`/category/${category.slug}`} className="category-button">
                 {categoryImage ? <span className="category-button-image"><img src={categoryImage} alt="" /></span> : null}
-                <span className="category-button-label">{category.name}</span>
+                <span className="category-button-label">{t(category.name)}</span>
               </Link>;
             })}
           </div>

@@ -36,7 +36,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       <section className="form-card" style={{ maxWidth: 700, marginTop: 16 }}>
         <h2>{t("Productos")}</h2>
-        {order.items.map((item, index) => <div className="meta-row" key={`${item.product_name}-${index}`}><span>{item.product_name ?? t("Producto")} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
+        {order.items.map((item, index) => <div className="meta-row" key={`${item.product_name}-${index}`}><span>{item.product_name ? t(item.product_name) : t("Producto")} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
       </section>
 
       {order.shipping_address ? <section className="form-card" style={{ maxWidth: 700, marginTop: 16 }}>
