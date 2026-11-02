@@ -3,7 +3,7 @@
 import { formatPrice } from "@/lib/admin-data";
 import { useAdminResource } from "@/components/admin-data-loader";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +117,8 @@ export default function AdminProductsPage() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [draggedDetailImageIndex, setDraggedDetailImageIndex] = useState<number | null>(null);
+  const [dropDetailImageIndex, setDropDetailImageIndex] = useState<number | null>(null);
+  const detailImageDragRef = useRef<{ fromIndex: number; toIndex: number; pointerId: number } | null>(null);
   const [pendingPrimaryImages, setPendingPrimaryImages] = useState<File[]>([]);
   const [pendingDetailImages, setPendingDetailImages] = useState<File[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -198,12 +200,33 @@ export default function AdminProductsPage() {
     });
   };
 
-  const handleDetailImageDrop = (event: DragEvent<HTMLDivElement>, targetIndex: number) => {
+  const handleDetailImagePointerDown = (event: PointerEvent<HTMLButtonElement>, index: number) => {
+    if (event.button !== 0 || uploading || saving) return;
     event.preventDefault();
-    const sourceIndexText = event.dataTransfer.getData("text/plain").trim();
-    const sourceIndex = Number(sourceIndexText);
-    if (sourceIndexText && Number.isInteger(sourceIndex)) moveDetailImage(sourceIndex, targetIndex);
+    detailImageDragRef.current = { fromIndex: index, toIndex: index, pointerId: event.pointerId };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDraggedDetailImageIndex(index);
+    setDropDetailImageIndex(index);
+  };
+
+  const handleDetailImagePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = detailImageDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-detail-image-index]");
+    const targetIndex = Number(target?.dataset.detailImageIndex);
+    if (target && Number.isInteger(targetIndex)) {
+      drag.toIndex = targetIndex;
+      setDropDetailImageIndex(targetIndex);
+    }
+  };
+
+  const handleDetailImagePointerEnd = (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = detailImageDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag.fromIndex !== drag.toIndex) moveDetailImage(drag.fromIndex, drag.toIndex);
+    detailImageDragRef.current = null;
     setDraggedDetailImageIndex(null);
+    setDropDetailImageIndex(null);
   };
 
   const uploadImages = async (files: FileList | File[], target: "primary" | "detail", color?: string) => {
@@ -458,20 +481,23 @@ export default function AdminProductsPage() {
               <div className="product-image-strip-row">
                 <div className="product-image-strip" aria-label="商品详情图">
                   {draft.detailImages.map((image, index) => <div
-                    className={`product-image-item${draggedDetailImageIndex === index ? " is-dragging" : ""}`}
+                    className={`product-image-item${draggedDetailImageIndex === index ? " is-dragging" : ""}${dropDetailImageIndex === index && draggedDetailImageIndex !== index ? " is-drop-target" : ""}`}
                     key={`${image}-${index}`}
-                    draggable={!uploading && !saving}
-                    onDragStart={(event) => {
-                      event.dataTransfer.effectAllowed = "move";
-                      event.dataTransfer.setData("text/plain", String(index));
-                      setDraggedDetailImageIndex(index);
-                    }}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => handleDetailImageDrop(event, index)}
-                    onDragEnd={() => setDraggedDetailImageIndex(null)}
+                    data-detail-image-index={index}
                   >
                     <div className="product-image-thumb"><img src={image} alt={`${draft.name} 的详情图 ${index + 1}`} /><button type="button" className="product-image-remove" onClick={() => removeImage(index)} aria-label={`删除详情图 ${index + 1}`} title={`删除详情图 ${index + 1}`}>×</button></div>
                     <div className="product-image-order">
+                      <button
+                        type="button"
+                        className="product-image-drag-handle"
+                        onPointerDown={(event) => handleDetailImagePointerDown(event, index)}
+                        onPointerMove={handleDetailImagePointerMove}
+                        onPointerUp={handleDetailImagePointerEnd}
+                        onPointerCancel={handleDetailImagePointerEnd}
+                        disabled={uploading || saving}
+                        aria-label={`按住拖动详情图 ${index + 1}`}
+                        title="按住拖动调整位置"
+                      >⠿</button>
                       <button type="button" onClick={() => moveDetailImage(index, index - 1)} disabled={index === 0 || uploading || saving} aria-label={`详情图 ${index + 1} 上移`} title="上移">↑</button>
                       <span>{index + 1}</span>
                       <button type="button" onClick={() => moveDetailImage(index, index + 1)} disabled={index === draft.detailImages.length - 1 || uploading || saving} aria-label={`详情图 ${index + 1} 下移`} title="下移">↓</button>

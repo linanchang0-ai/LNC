@@ -359,8 +359,9 @@ button {
   font-size: 0.78rem;
 }
 
-.product-image-item[draggable="true"] {
-  cursor: grab;
+.product-image-item.is-drop-target {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 .product-image-item.is-dragging {
@@ -404,6 +405,16 @@ button {
 .product-image-order button:disabled {
   cursor: not-allowed;
   opacity: 0.4;
+}
+
+.product-image-order .product-image-drag-handle {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.product-image-order .product-image-drag-handle:active {
+  cursor: grabbing;
 }
 
 .product-image-remove {
