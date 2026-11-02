@@ -225,7 +225,7 @@ export function Header() {
             <div className="mobile-links">
               {group.links.map((link) => (
                 <Link key={link.label} href={link.href} onClick={() => setMobileOpen(false)}>
-                  {link.label}
+                  {t(link.label)}
                 </Link>
               ))}
             </div>
