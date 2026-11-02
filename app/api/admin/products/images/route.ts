@@ -1,6 +1,31 @@
 import { NextResponse } from "next/server";
 import { createAdminAuthClient, createAdminDataClient, hasAdminRole } from "@/lib/admin-auth";
 
+const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/gif": "gif",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+type UploadImageMetadata = { type: string; size: number };
+type SignedImageUpload = { path: string; token: string; url: string };
+
+function isUploadImageMetadata(image: unknown): image is UploadImageMetadata {
+  return Boolean(
+    image &&
+    typeof image === "object" &&
+    "type" in image &&
+    typeof image.type === "string" &&
+    "size" in image &&
+    typeof image.size === "number" &&
+    Number.isInteger(image.size) &&
+    image.size > 0 &&
+    image.size <= MAX_UPLOAD_IMAGE_BYTES
+  );
+}
+
 function requestCookies(request: Request) {
   return () => request.headers.get("cookie")?.split(";").map((part) => {
     const [name, ...value] = part.trim().split("=");
@@ -16,21 +41,39 @@ export async function POST(request: Request) {
   const supabase = createAdminDataClient();
   if (!supabase) return NextResponse.json({ error: "El almacenamiento no está configurado." }, { status: 503 });
 
-  const formData = await request.formData();
-  const productId = formData.get("productId");
-  const images = formData.getAll("images").filter((entry): entry is File => entry instanceof File);
-  if (typeof productId !== "string" || !productId || !images.length) return NextResponse.json({ error: "Selecciona al menos una imagen." }, { status: 400 });
-  if (images.some((image) => !image.type.startsWith("image/"))) return NextResponse.json({ error: "Solo se permiten archivos de imagen." }, { status: 400 });
-
-  const urls: string[] = [];
-  for (const image of images) {
-    const extension = image.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
-    const path = `${productId}/${crypto.randomUUID()}.${extension}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, await image.arrayBuffer(), { contentType: image.type, upsert: false });
-    if (error) return NextResponse.json({ error: `No se pudo guardar la imagen: ${error.message}` }, { status: 400 });
-    const { data: publicUrl } = supabase.storage.from("product-images").getPublicUrl(path);
-    urls.push(publicUrl.publicUrl);
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "La solicitud de imágenes no es válida." }, { status: 400 });
   }
 
-  return NextResponse.json({ urls });
+  if (!body || typeof body !== "object" || !("productId" in body) || !("images" in body)) {
+    return NextResponse.json({ error: "La solicitud de imágenes no es válida." }, { status: 400 });
+  }
+
+  const { productId, images } = body;
+  if (typeof productId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)) {
+    return NextResponse.json({ error: "El producto seleccionado no es válido." }, { status: 400 });
+  }
+  if (!Array.isArray(images) || !images.length) {
+    return NextResponse.json({ error: "Selecciona al menos una imagen." }, { status: 400 });
+  }
+
+  const imageMetadata = images.filter(isUploadImageMetadata);
+  if (imageMetadata.length !== images.length || imageMetadata.some((image) => !(image.type in IMAGE_EXTENSIONS))) {
+    return NextResponse.json({ error: "Las imágenes deben ser JPEG, PNG, WebP o GIF y no superar 7 MB." }, { status: 400 });
+  }
+
+  const uploads: SignedImageUpload[] = [];
+  for (const image of imageMetadata) {
+    const extension = IMAGE_EXTENSIONS[image.type];
+    const path = `${productId}/${crypto.randomUUID()}.${extension}`;
+    const { data, error } = await supabase.storage.from("product-images").createSignedUploadUrl(path, { upsert: false });
+    if (error) return NextResponse.json({ error: `No se pudo preparar la carga de imagen: ${error.message}` }, { status: 502 });
+    const { data: publicUrl } = supabase.storage.from("product-images").getPublicUrl(path);
+    uploads.push({ path: data.path, token: data.token, url: publicUrl.publicUrl });
+  }
+
+  return NextResponse.json({ uploads });
 }

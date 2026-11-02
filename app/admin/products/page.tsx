@@ -2,6 +2,7 @@
 
 import { formatPrice } from "@/lib/admin-data";
 import { useAdminResource } from "@/components/admin-data-loader";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,9 @@ type AdminCategory = { id: string; slug: string; name: string };
 
 const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
 const STORAGE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+type SignedImageUpload = { path: string; token: string; url: string };
+type ImageUploadResponse = { uploads?: SignedImageUpload[]; error?: string };
 
 function toStringList(value: unknown) {
   if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
@@ -54,6 +58,51 @@ async function prepareImageForUpload(file: File) {
   } finally {
     URL.revokeObjectURL(sourceUrl);
   }
+}
+
+async function readImageUploadResponse(response: Response): Promise<ImageUploadResponse> {
+  const responseText = await response.text();
+  try {
+    return JSON.parse(responseText) as ImageUploadResponse;
+  } catch {
+    const message = response.status === 413
+      ? "图片请求过大，请减少图片数量或选择较小的图片后重试。"
+      : `图片上传服务返回异常响应（HTTP ${response.status}）。`;
+    throw new Error(message);
+  }
+}
+
+async function uploadProductImages(productId: string, selectedFiles: File[]) {
+  const uploadFiles = await Promise.all(selectedFiles.map(prepareImageForUpload));
+  const response = await fetch("/api/admin/products/images", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productId, images: uploadFiles.map((file) => ({ type: file.type, size: file.size })) }),
+  });
+  const data = await readImageUploadResponse(response);
+  if (!response.ok) throw new Error(data.error ?? "图片上传失败。");
+
+  const uploads = data.uploads;
+  if (!Array.isArray(uploads) || uploads.length !== uploadFiles.length || uploads.some((upload) =>
+    !upload ||
+    typeof upload.path !== "string" ||
+    typeof upload.token !== "string" ||
+    typeof upload.url !== "string"
+  )) {
+    throw new Error("图片上传服务返回的数据不完整，请重试。");
+  }
+
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) throw new Error("图片存储服务未配置，请联系网站管理员。");
+
+  const urls: string[] = [];
+  for (const [index, file] of uploadFiles.entries()) {
+    const upload = uploads[index];
+    const { error } = await supabase.storage.from("product-images").uploadToSignedUrl(upload.path, upload.token, file, { contentType: file.type, upsert: false });
+    if (error) throw new Error(`图片上传失败：${error.message}`);
+    urls.push(upload.url);
+  }
+  return urls;
 }
 
 export default function AdminProductsPage() {
@@ -149,14 +198,7 @@ export default function AdminProductsPage() {
     setUploading(true);
     setSaveError("");
     try {
-      const uploadFiles = await Promise.all(selectedFiles.map(prepareImageForUpload));
-      const formData = new FormData();
-      formData.append("productId", editingId);
-      uploadFiles.forEach((file) => formData.append("images", file));
-      const response = await fetch("/api/admin/products/images", { method: "POST", body: formData });
-      const data = await response.json() as { urls?: string[]; error?: string };
-      const uploadedUrls = data.urls;
-      if (!response.ok || !uploadedUrls) throw new Error(data.error ?? "图片上传失败。");
+      const uploadedUrls = await uploadProductImages(editingId, selectedFiles);
       if (target === "detail") {
         const detailImages = [...draft.detailImages, ...uploadedUrls];
         const saveResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId, detailImages }) });
@@ -178,17 +220,11 @@ export default function AdminProductsPage() {
     const files = [...pendingPrimaryImages, ...pendingDetailImages];
     if (!files.length) return { primaryImage: draft.primaryImage, gallery: draft.gallery, detailImages: draft.detailImages };
 
-    const uploadFiles = await Promise.all(files.map(prepareImageForUpload));
-    const formData = new FormData();
-    formData.append("productId", productId);
-    uploadFiles.forEach((file) => formData.append("images", file));
-    const response = await fetch("/api/admin/products/images", { method: "POST", body: formData });
-    const data = await response.json() as { urls?: string[]; error?: string };
-    if (!response.ok || !data.urls) throw new Error(data.error ?? "图片上传失败。");
+    const uploadedUrls = await uploadProductImages(productId, files);
 
-    const newPrimaryImages = data.urls.slice(0, pendingPrimaryImages.length);
+    const newPrimaryImages = uploadedUrls.slice(0, pendingPrimaryImages.length);
     const primaryImage = draft.primaryImage || newPrimaryImages[0] || "";
-    return { primaryImage, gallery: [...draft.gallery, ...newPrimaryImages.slice(draft.primaryImage ? 0 : 1)], detailImages: [...draft.detailImages, ...data.urls.slice(pendingPrimaryImages.length)] };
+    return { primaryImage, gallery: [...draft.gallery, ...newPrimaryImages.slice(draft.primaryImage ? 0 : 1)], detailImages: [...draft.detailImages, ...uploadedUrls.slice(pendingPrimaryImages.length)] };
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>, target: "primary" | "detail", color?: string) => {
@@ -213,22 +249,27 @@ export default function AdminProductsPage() {
       const response = await fetch("/api/admin", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, price: Number(draft.price), shippingFee: Number(draft.shippingFee), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, materials: draft.materials.split(",").map((item) => item.trim()).filter(Boolean), dimensions: draft.dimensions, colors: draft.colors.split(",").map((item) => item.trim()).filter(Boolean), sizes, primaryImage: draft.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: draft.gallery, detailImages: draft.detailImages }) });
       const data = await response.json() as { item?: AdminProduct; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error ?? "商品保存失败。");
-      const savedProduct = data.item;
-      if (!id && (pendingPrimaryImages.length || pendingDetailImages.length)) {
+      let savedProduct = data.item;
+      const hasPendingImages = pendingPrimaryImages.length > 0 || pendingDetailImages.length > 0;
+      if (!id && hasPendingImages) {
+        setItems((current) => [savedProduct, ...current.filter((product) => product.id !== savedProduct.id)]);
+        setCreating(false);
+        setEditingId(savedProduct.id);
+      }
+      if (hasPendingImages) {
         setUploading(true);
         const images = await uploadPendingImages(savedProduct.id);
-        const imageResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: savedProduct.id, name: draft.name, category: draft.category, price: Number(draft.price), shippingFee: Number(draft.shippingFee), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, materials: draft.materials.split(",").map((item) => item.trim()).filter(Boolean), dimensions: draft.dimensions, colors: draft.colors.split(",").map((item) => item.trim()).filter(Boolean), sizes, primaryImage: images.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: images.gallery, detailImages: images.detailImages }) });
-        const imageData = await imageResponse.json() as { item?: AdminProduct; error?: string };
-        if (!imageResponse.ok || !imageData.item) throw new Error(imageData.error ?? "图片保存失败。");
+        setDraft((current) => ({ ...current, ...images }));
         setPendingPrimaryImages([]);
         setPendingDetailImages([]);
-        setItems((current) => [imageData.item!, ...current]);
-        beginEditing(imageData.item);
-      } else {
-        setItems((current) => id ? current.map((product) => product.id === id ? { ...product, ...savedProduct } : product) : [savedProduct, ...current]);
-        if (id) setEditingId(null);
-        else beginEditing(savedProduct);
+        const imageResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: savedProduct.id, primaryImage: images.primaryImage, gallery: images.gallery, detailImages: images.detailImages }) });
+        const imageData = await imageResponse.json() as { item?: AdminProduct; error?: string };
+        if (!imageResponse.ok || !imageData.item) throw new Error(imageData.error ?? "图片保存失败。");
+        savedProduct = imageData.item;
       }
+      setItems((current) => id ? current.map((product) => product.id === id ? { ...product, ...savedProduct } : product) : [savedProduct, ...current.filter((product) => product.id !== savedProduct.id)]);
+      if (id) setEditingId(null);
+      else beginEditing(savedProduct);
       setCreating(false);
     } catch (saveProductError) {
       setSaveError(saveProductError instanceof Error ? saveProductError.message : "商品保存失败。");
