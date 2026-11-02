@@ -10,9 +10,10 @@ import { AddressPasteAssist } from "@/components/address-paste-assist";
 import type { AddressFields } from "@/lib/address-parser";
 import { metaEvents } from "@/components/MetaPixel";
 import { useI18n } from "@/components/locale-provider";
+import { translateProductColor, translateProductField } from "@/lib/i18n";
 
 export default function CheckoutPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { items, subtotal, shipping, discount, couponCode, total, clearCart } = useCart();
   const cartIsEmpty = items.length === 0;
   const [form, setForm] = useState({
@@ -240,7 +241,7 @@ export default function CheckoutPage() {
 
           <div className="checkout-item-list">
             {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`}>
-              <span>{t(item.name)}{item.color ? ` · ${t(item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
+              <span>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
               <span>{formatPrice(item.price * item.quantity)}</span>
             </div>)}
           </div>

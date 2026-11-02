@@ -9,11 +9,13 @@ import {
   startTransition,
   type ReactNode,
 } from "react";
+import type { ProductTranslations } from "@/lib/product-translations";
 
 export type CartItem = {
   id: string | number;
   slug: string;
   name: string;
+  translations?: ProductTranslations;
   price: number;
   image: string;
   color?: string;

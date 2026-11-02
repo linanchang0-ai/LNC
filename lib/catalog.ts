@@ -1,5 +1,6 @@
 import { categories as fallbackCategories, products, type Category, type Product } from "@/data/products";
 import { createAdminDataClient } from "@/lib/admin-auth";
+import { normalizeProductTranslations } from "@/lib/product-translations";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
 type CatalogRow = {
@@ -12,6 +13,7 @@ type CatalogRow = {
   old_price: number | null;
   short_description: string;
   description: string;
+  translations: unknown;
   materials: string[];
   dimensions: string;
   colors: string[];
@@ -60,11 +62,15 @@ export async function getCatalogCategories(): Promise<Category[]> {
 export async function getCatalogProducts(): Promise<Product[]> {
   const supabase = getSupabaseServerClient();
   if (!supabase) return useDemoCatalog ? products : [];
-  const fields = "id, slug, name, category, price, old_price, short_description, description, materials, dimensions, colors, size_options, stock, inventory_quantity, shipping_fee, featured, limited, image_url, color_images, color_prices, gallery, detail_images, is_published, created_at";
+  const fields = "id, slug, name, category, price, old_price, short_description, description, translations, materials, dimensions, colors, size_options, stock, inventory_quantity, shipping_fee, featured, limited, image_url, color_images, color_prices, gallery, detail_images, is_published, created_at";
   const fallbackFields = [
+    fields.replace(", translations", ""),
     fields.replace(", color_prices", ""),
     fields.replace(", size_options", ""),
     fields.replace(", size_options, stock", ", stock").replace(", color_prices", ""),
+    fields.replace(", translations", "").replace(", color_prices", ""),
+    fields.replace(", translations", "").replace(", size_options", ""),
+    fields.replace(", translations", "").replace(", size_options, stock", ", stock").replace(", color_prices", ""),
   ];
   const initialResult = await supabase.from("products").select(fields).eq("is_published", true);
   let data: unknown = initialResult.data;
@@ -93,6 +99,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
       oldPrice: row.old_price === null ? undefined : Number(row.old_price),
       shortDescription: row.short_description,
       description: row.description,
+      translations: normalizeProductTranslations(row.translations) ?? undefined,
       materials: row.materials,
       dimensions: row.dimensions,
       colors: row.colors,

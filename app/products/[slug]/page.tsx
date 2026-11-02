@@ -10,6 +10,7 @@ import { TrustSignals } from "@/components/trust-signals";
 import { useWishlist } from "@/components/wishlist";
 import { metaEvents } from "@/components/MetaPixel";
 import { useI18n } from "@/components/locale-provider";
+import { translateProductColor, translateProductField, translateProductMaterials } from "@/lib/i18n";
 
 function imageForColor(product: Product, color: string) {
   return product.colorImages?.[color] ?? product.gallery[product.colors.indexOf(color)] ?? product.image;
@@ -20,7 +21,7 @@ function priceForColor(product: Product, color: string) {
 }
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const resolvedParams = use(params);
   const [product, setProduct] = useState<Product>();
   const [productLoaded, setProductLoaded] = useState(false);
@@ -63,7 +64,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   const isOutOfStock = product.stock.toLowerCase().includes("agotado");
   const selectedPrice = priceForColor(product, selectedColor);
-  const productName = t(product.name);
+  const productName = translateProductField(locale, product.translations, "name", product.name);
+  const productDescription = translateProductField(locale, product.translations, "description", product.description);
 
   const selectImage = (image: string) => {
     setActiveImage(image);
@@ -84,7 +86,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     "@context": "https://schema.org",
     "@type": "Product",
     name: productName,
-    description: t(product.description),
+    description: productDescription,
     image: product.gallery,
     brand: { "@type": "Brand", name: "LNC SPORTS" },
     offers: { "@type": "Offer", priceCurrency: "MXN", price: selectedPrice, availability: isOutOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock" },
@@ -111,7 +113,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <div className="price">{formatPrice(selectedPrice)}</div>
             {product.oldPrice ? <span className="old-price">{formatPrice(product.oldPrice)}</span> : null}
           </div>
-          <p className="muted" style={{ margin: "8px 0 18px" }}>{t(product.shortDescription)}</p>
+          <p className="muted" style={{ margin: "8px 0 18px" }}>{translateProductField(locale, product.translations, "shortDescription", product.shortDescription)}</p>
           <div className="quantity-control" aria-label={t("Cantidad")}>
             <span>{t("Cantidad")}</span>
             <div>
@@ -121,9 +123,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
           </div>
           <div className="variant-control">
-            <div><span>{t("Color")}</span><strong>{t(selectedColor)}</strong></div>
+            <div><span>{t("Color")}</span><strong>{translateProductColor(locale, product.translations, selectedColor)}</strong></div>
             <div className="variant-options">
-              {product.colors.map((color) => <button type="button" key={color} className={selectedColor === color ? "is-selected" : ""} onClick={() => { setSelectedColor(color); setActiveImage(imageForColor(product, color)); }} disabled={isOutOfStock}>{t(color)}</button>)}
+              {product.colors.map((color) => <button type="button" key={color} className={selectedColor === color ? "is-selected" : ""} onClick={() => { setSelectedColor(color); setActiveImage(imageForColor(product, color)); }} disabled={isOutOfStock}>{translateProductColor(locale, product.translations, color)}</button>)}
             </div>
           </div>
           {product.sizes?.length ? <div className="variant-control">
@@ -133,8 +135,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
           </div> : null}
           <div className="meta-row"><span>{t("Disponibilidad")}</span><span>{t(product.stock)}</span></div>
-          <div className="meta-row"><span>{t("Materiales")}</span><span>{product.materials.map((material) => t(material)).join(", ")}</span></div>
-          <div className="meta-row"><span>{t("Dimensiones")}</span><span>{product.dimensions}</span></div>
+          <div className="meta-row"><span>{t("Materiales")}</span><span>{translateProductMaterials(locale, product.translations, product.materials).join(", ")}</span></div>
+          <div className="meta-row"><span>{t("Dimensiones")}</span><span>{translateProductField(locale, product.translations, "dimensions", product.dimensions)}</span></div>
           <div className="meta-row"><span>{t("Envío")}</span><span>{product.shippingFee ? formatPrice(product.shippingFee) : t("Gratis")}</span></div>
           <div className="meta-row"><span>{t("Entrega estimada")}</span><span>{t("10-25 días hábiles")}</span></div>
           <div className="detail-actions">
@@ -142,7 +144,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               className="primary-button"
               disabled={isOutOfStock}
               onClick={() => {
-                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined, shippingFee: product.shippingFee });
+                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined, shippingFee: product.shippingFee });
                 // Meta Pixel: AddToCart
                 metaEvents.addToCart({
                   content_name: product.name,
@@ -160,7 +162,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               className="secondary-button"
               disabled={isOutOfStock}
               onClick={() => {
-                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined, shippingFee: product.shippingFee });
+                for (let index = 0; index < quantity; index += 1) addToCart({ id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor, size: selectedSize || undefined, shippingFee: product.shippingFee });
                 // Meta Pixel: AddToCart
                 metaEvents.addToCart({
                   content_name: product.name,
@@ -191,7 +193,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
       <section style={{ marginTop: 26 }}>
         <h2 className="section-title">{t("Descripción del producto")}</h2>
-        <p className="muted" style={{ marginTop: 12 }}>{t(product.description)}</p>
+        <p className="muted" style={{ marginTop: 12 }}>{productDescription}</p>
         <ul className="detail-list">
           {product.details.map((detail) => (
             <li key={detail}>{t(detail)}</li>

@@ -3,11 +3,12 @@
 import { formatPrice } from "@/lib/admin-data";
 import { useAdminResource } from "@/components/admin-data-loader";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { normalizeProductTranslations, type ProductTranslationLocale, type ProductTranslationTextField, type ProductTranslations } from "@/lib/product-translations";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from "react";
 
 export const dynamic = "force-dynamic";
 
-type AdminProduct = { id: string; name: string; category: string | null; price: number; shipping_fee: number | null; inventory_quantity: number | null; short_description: string | null; description: string | null; materials: unknown; dimensions: string | null; colors: unknown; size_options: unknown; featured: boolean; is_published: boolean; image_url: string | null; color_images: unknown; color_prices: unknown; gallery: unknown; detail_images: unknown };
+type AdminProduct = { id: string; name: string; category: string | null; price: number; shipping_fee: number | null; inventory_quantity: number | null; short_description: string | null; description: string | null; translations: unknown; materials: unknown; dimensions: string | null; colors: unknown; size_options: unknown; featured: boolean; is_published: boolean; image_url: string | null; color_images: unknown; color_prices: unknown; gallery: unknown; detail_images: unknown };
 type AdminCategory = { id: string; slug: string; name: string };
 
 const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
@@ -111,7 +112,7 @@ export default function AdminProductsPage() {
   const editorDialogRef = useRef<HTMLDialogElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState({ name: "", category: "", price: "", shippingFee: "0", inventoryQuantity: "", shortDescription: "", description: "", materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {} as Record<string, string>, colorPrices: {} as Record<string, string>, gallery: [] as string[], detailImages: [] as string[] });
+  const [draft, setDraft] = useState({ name: "", category: "", price: "", shippingFee: "0", inventoryQuantity: "", shortDescription: "", description: "", translations: {} as ProductTranslations, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {} as Record<string, string>, colorPrices: {} as Record<string, string>, gallery: [] as string[], detailImages: [] as string[] });
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
@@ -165,7 +166,7 @@ export default function AdminProductsPage() {
     setPendingDetailImages([]);
     const primaryImage = product.image_url || gallery[0] || "";
     const detailImages = toStringList(product.detail_images);
-    setDraft({ name: product.name, category: product.category ?? "", price: String(product.price), shippingFee: String(product.shipping_fee ?? 0), inventoryQuantity: String(product.inventory_quantity ?? 0), shortDescription: product.short_description ?? "", description: product.description ?? "", materials: materials.join(", "), dimensions: product.dimensions ?? "", colors: colors.join(", "), sizes: sizes.join(", "), primaryImage, colorImages, colorPrices, gallery: gallery.filter((image) => image !== primaryImage), detailImages });
+    setDraft({ name: product.name, category: product.category ?? "", price: String(product.price), shippingFee: String(product.shipping_fee ?? 0), inventoryQuantity: String(product.inventory_quantity ?? 0), shortDescription: product.short_description ?? "", description: product.description ?? "", translations: normalizeProductTranslations(product.translations) ?? {}, materials: materials.join(", "), dimensions: product.dimensions ?? "", colors: colors.join(", "), sizes: sizes.join(", "), primaryImage, colorImages, colorPrices, gallery: gallery.filter((image) => image !== primaryImage), detailImages });
   };
 
   const beginCreating = () => {
@@ -174,7 +175,7 @@ export default function AdminProductsPage() {
     setSaveError("");
     setPendingPrimaryImages([]);
     setPendingDetailImages([]);
-    setDraft({ name: "", category: "", price: "", shippingFee: "0", inventoryQuantity: "0", shortDescription: "", description: "", materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {}, colorPrices: {}, gallery: [], detailImages: [] });
+    setDraft({ name: "", category: "", price: "", shippingFee: "0", inventoryQuantity: "0", shortDescription: "", description: "", translations: {}, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {}, colorPrices: {}, gallery: [], detailImages: [] });
   };
 
   const closeEditor = () => {
@@ -288,7 +289,17 @@ export default function AdminProductsPage() {
       const savedColorPrices = Object.fromEntries(Object.entries(draft.colorPrices).flatMap(([color, price]) => Number(price) > 0 ? [[color, Number(price)]] : []));
       const colorPrices = Object.keys(savedColorPrices).length ? savedColorPrices : undefined;
       const sizes = toStringList(draft.sizes);
-      const response = await fetch("/api/admin", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, price: Number(draft.price), shippingFee: Number(draft.shippingFee), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, materials: draft.materials.split(",").map((item) => item.trim()).filter(Boolean), dimensions: draft.dimensions, colors: draft.colors.split(",").map((item) => item.trim()).filter(Boolean), sizes, primaryImage: draft.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: draft.gallery, detailImages: draft.detailImages }) });
+      const currentMaterials = toStringList(draft.materials);
+      const currentColors = toStringList(draft.colors);
+      const translations = Object.fromEntries((["en", "zh"] as const).map((locale) => {
+        const translation = draft.translations[locale] ?? {};
+        return [locale, {
+          ...translation,
+          materials: Object.fromEntries(currentMaterials.flatMap((material) => translation.materials?.[material] ? [[material, translation.materials[material]]] : [])),
+          colors: Object.fromEntries(currentColors.flatMap((color) => translation.colors?.[color] ? [[color, translation.colors[color]]] : [])),
+        }];
+      })) as ProductTranslations;
+      const response = await fetch("/api/admin", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, price: Number(draft.price), shippingFee: Number(draft.shippingFee), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, translations, materials: currentMaterials, dimensions: draft.dimensions, colors: currentColors, sizes, primaryImage: draft.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: draft.gallery, detailImages: draft.detailImages }) });
       const data = await response.json() as { item?: AdminProduct; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error ?? "商品保存失败。");
       let savedProduct = data.item;
@@ -374,6 +385,21 @@ export default function AdminProductsPage() {
 
   const draftColors = draft.colors.split(",").map((color) => color.trim()).filter(Boolean);
   const mainImages = [draft.primaryImage, ...draft.gallery].filter(Boolean);
+  const updateTranslationText = (locale: ProductTranslationLocale, field: ProductTranslationTextField, value: string) => {
+    setDraft((current) => ({ ...current, translations: { ...current.translations, [locale]: { ...current.translations[locale], [field]: value } } }));
+  };
+  const updateTranslationList = (locale: ProductTranslationLocale, field: "materials" | "colors", value: string) => {
+    const values = value.split(",").map((item) => item.trim());
+    setDraft((current) => {
+      const translation = current.translations[locale] ?? {};
+      const sourceValues = toStringList(field === "materials" ? current.materials : current.colors);
+      const mappedValues = Object.fromEntries(sourceValues.flatMap((source, index) => values[index] ? [[source, values[index]]] : []));
+      const updated = field === "materials"
+        ? { ...translation, materials: mappedValues }
+        : { ...translation, colors: mappedValues };
+      return { ...current, translations: { ...current.translations, [locale]: updated } };
+    });
+  };
 
   const matchColorImagesByOrder = () => {
     setDraft((current) => ({
@@ -504,6 +530,34 @@ export default function AdminProductsPage() {
             {draftColors.length > 0 ? <div className="color-primary-images"><strong>颜色主图</strong><p>可按顺序自动匹配，或为单个颜色上传不同图片。</p>{mainImages.length > 0 ? <button type="button" className="small-button" onClick={matchColorImagesByOrder}>按顺序匹配颜色主图</button> : null}<div className="color-primary-images-grid">{draftColors.map((color) => <div className="color-primary-image" key={color}><span>{color}</span>{draft.colorImages[color] ? <div className="product-primary-image"><img src={draft.colorImages[color]} alt={`${draft.name} ${color} 主图`} /><button type="button" className="product-image-remove" onClick={() => setDraft((current) => { const colorImages = { ...current.colorImages }; delete colorImages[color]; return { ...current, colorImages }; })} aria-label={`删除${color}主图`} title={`删除${color}主图`}>×</button></div> : null}<label className={`product-image-upload-button${uploading ? " is-disabled" : ""}`}>{uploading ? "正在上传..." : draft.colorImages[color] ? "更换主图" : "上传主图"}<input className="product-image-file-input" type="file" accept="image/*" disabled={uploading} onChange={(event) => handleFileChange(event, "primary", color)} /></label></div>)}</div></div> : null}
           </div> : <div className="product-image-pending"><strong>商品图片</strong><span>可先从图库选择图片，创建商品后会自动上传。</span><div className="product-image-channels"><label className="product-image-upload-button">{pendingPrimaryImages.length ? `已选 ${pendingPrimaryImages.length} 张主图` : "选择主图"}<input className="product-image-file-input" type="file" accept="image/*" multiple onChange={(event) => handlePendingFileChange(event, "primary")} /></label><label className="product-image-upload-button">{pendingDetailImages.length ? `已选 ${pendingDetailImages.length} 张详情图` : "选择详情图"}<input className="product-image-file-input" type="file" accept="image/*" multiple onChange={(event) => handlePendingFileChange(event, "detail")} /></label></div></div>}
           <div className="field"><label>商品名称</label><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></div>
+          <div className="field">
+            <strong>商品译文（西班牙语为原文）</strong>
+            <p className="muted">英语和简体中文可留空；留空时会使用现有词典翻译，若词典没有对应内容则显示西班牙语原文。</p>
+          </div>
+          <div className="field-row two-col">
+            <div className="field"><label>商品名称（英语）</label><input value={draft.translations.en?.name ?? ""} onChange={(event) => updateTranslationText("en", "name", event.target.value)} /></div>
+            <div className="field"><label>商品名称（简体中文）</label><input value={draft.translations.zh?.name ?? ""} onChange={(event) => updateTranslationText("zh", "name", event.target.value)} /></div>
+          </div>
+          <div className="field-row two-col">
+            <div className="field"><label>简短描述（英语）</label><input value={draft.translations.en?.shortDescription ?? ""} onChange={(event) => updateTranslationText("en", "shortDescription", event.target.value)} /></div>
+            <div className="field"><label>简短描述（简体中文）</label><input value={draft.translations.zh?.shortDescription ?? ""} onChange={(event) => updateTranslationText("zh", "shortDescription", event.target.value)} /></div>
+          </div>
+          <div className="field-row two-col">
+            <div className="field"><label>详细描述（英语）</label><textarea rows={4} value={draft.translations.en?.description ?? ""} onChange={(event) => updateTranslationText("en", "description", event.target.value)} /></div>
+            <div className="field"><label>详细描述（简体中文）</label><textarea rows={4} value={draft.translations.zh?.description ?? ""} onChange={(event) => updateTranslationText("zh", "description", event.target.value)} /></div>
+          </div>
+          <div className="field-row two-col">
+            <div className="field"><label>材质（英语，按西语材质顺序用逗号分隔）</label><input value={toStringList(draft.materials).map((material) => draft.translations.en?.materials?.[material] ?? "").join(", ")} onChange={(event) => updateTranslationList("en", "materials", event.target.value)} placeholder="与西语材质一一对应" /></div>
+            <div className="field"><label>材质（简体中文，按西语材质顺序用逗号分隔）</label><input value={toStringList(draft.materials).map((material) => draft.translations.zh?.materials?.[material] ?? "").join(", ")} onChange={(event) => updateTranslationList("zh", "materials", event.target.value)} placeholder="与西语材质一一对应" /></div>
+          </div>
+          <div className="field-row two-col">
+            <div className="field"><label>颜色（英语，按西语颜色顺序用逗号分隔）</label><input value={draftColors.map((color) => draft.translations.en?.colors?.[color] ?? "").join(", ")} onChange={(event) => updateTranslationList("en", "colors", event.target.value)} placeholder="与西语颜色一一对应" /></div>
+            <div className="field"><label>颜色（简体中文，按西语颜色顺序用逗号分隔）</label><input value={draftColors.map((color) => draft.translations.zh?.colors?.[color] ?? "").join(", ")} onChange={(event) => updateTranslationList("zh", "colors", event.target.value)} placeholder="与西语颜色一一对应" /></div>
+          </div>
+          <div className="field-row two-col">
+            <div className="field"><label>尺寸描述（英语）</label><input value={draft.translations.en?.dimensions ?? ""} onChange={(event) => updateTranslationText("en", "dimensions", event.target.value)} /></div>
+            <div className="field"><label>尺寸描述（简体中文）</label><input value={draft.translations.zh?.dimensions ?? ""} onChange={(event) => updateTranslationText("zh", "dimensions", event.target.value)} /></div>
+          </div>
           <div className="field-row two-col"><div className="field"><label>商品分类</label><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}><option value="">请选择</option>{categories.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}</select></div><div className="field"><label>商品价格（MXN）</label><input type="number" min="0.01" step="0.01" value={draft.price} onChange={(event) => setDraft({ ...draft, price: event.target.value })} /></div></div>
           <div className="field"><label>可售库存</label><input type="number" min="0" step="1" value={draft.inventoryQuantity} onChange={(event) => setDraft({ ...draft, inventoryQuantity: event.target.value })} /></div>
           <div className="field"><label>简短描述</label><input value={draft.shortDescription} onChange={(event) => setDraft({ ...draft, shortDescription: event.target.value })} /></div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminAuthClient, createAdminDataClient, getAdminRole, type AdminRole } from "@/lib/admin-auth";
 import { sendContactReply, sendShippingNotification } from "@/lib/email";
+import { normalizeProductTranslations, type ProductTranslations } from "@/lib/product-translations";
 
 function requestCookies(request: Request) {
   return () => request.headers.get("cookie")?.split(";").map((part) => {
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
   }
 
   if (resource === "products") {
-    const fields = "id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images, created_at";
+    const fields = "id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images, created_at";
     const fallbackFields = [
       fields.replace(", color_prices", ""),
       fields.replace(", size_options", ""),
@@ -143,13 +144,13 @@ export async function POST(request: Request) {
   const authorized = await authorizedClient(request);
   if (!authorized) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
-  let body: { name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; code?: string; discountType?: "percentage" | "fixed"; discountValue?: number; minimumSubtotal?: number; expiresAt?: string; maxUses?: number | null };
+  let body: { name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; code?: string; discountType?: "percentage" | "fixed"; discountValue?: number; minimumSubtotal?: number; expiresAt?: string; maxUses?: number | null };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "La solicitud no es válida." }, { status: 400 });
   }
-  const { name, category, price, shippingFee, inventoryQuantity, shortDescription, description, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, code, discountType, discountValue, minimumSubtotal, expiresAt, maxUses } = body;
+  const { name, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, code, discountType, discountValue, minimumSubtotal, expiresAt, maxUses } = body;
   if (resource === "categories") {
     if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
     const categoryName = name?.trim() ?? "";
@@ -187,12 +188,15 @@ export async function POST(request: Request) {
   if (!Number.isFinite(productShippingFee) || productShippingFee < 0) return NextResponse.json({ error: "El costo de envío no puede ser negativo." }, { status: 400 });
   if (!Number.isInteger(quantity) || quantity < 0) return NextResponse.json({ error: "El inventario debe ser un número entero igual o mayor a cero." }, { status: 400 });
   if (sizes !== undefined && (!Array.isArray(sizes) || sizes.some((size) => typeof size !== "string" || !size.trim() || size.trim().length > 30))) return NextResponse.json({ error: "Las tallas no son válidas." }, { status: 400 });
+  const productTranslations = translations === undefined ? {} : normalizeProductTranslations(translations);
+  if (!productTranslations) return NextResponse.json({ error: "Las traducciones del producto no son válidas." }, { status: 400 });
   const sizeOptions = [...new Set((sizes ?? []).map((size) => size.trim()))];
   const slug = productSlug(cleanName);
   if (!slug) return NextResponse.json({ error: "El nombre no permite generar un enlace válido." }, { status: 400 });
   const content = {
     short_description: shortDescription?.trim() || "",
     description: description?.trim() || "",
+    translations: productTranslations,
     materials: Array.isArray(materials) ? materials.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim()) : [],
     dimensions: dimensions?.trim() || "",
     colors: Array.isArray(colors) ? colors.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim()) : [],
@@ -215,7 +219,7 @@ export async function POST(request: Request) {
     ...content,
     image_url: primaryImage ?? "",
     is_published: false,
-  }).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images").single();
+  }).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images").single();
   if (error) return NextResponse.json({ error: error.code === "23505" ? "Ya existe un producto con ese nombre." : "No se pudo crear el producto." }, { status: 500 });
   void recordAdminAction(supabase, adminEmail, "created", "product", data.id, { name: data.name, isPublished: data.is_published });
   return NextResponse.json({ item: data }, { status: 201 });
@@ -225,13 +229,13 @@ export async function PATCH(request: Request) {
   const authorized = await authorizedClient(request);
   if (!authorized) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
-  let body: { id?: string; featured?: boolean; isPublished?: boolean; name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; status?: string; trackingNumber?: string; shippingCarrier?: string; restockApproved?: boolean; inspectionNotes?: string; reply?: string; isActive?: boolean };
+  let body: { id?: string; featured?: boolean; isPublished?: boolean; name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; status?: string; trackingNumber?: string; shippingCarrier?: string; restockApproved?: boolean; inspectionNotes?: string; reply?: string; isActive?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "La solicitud no es válida." }, { status: 400 });
   }
-  const { id, featured, isPublished, name, category, price, shippingFee, inventoryQuantity, shortDescription, description, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, status, trackingNumber, shippingCarrier, restockApproved, inspectionNotes, reply, isActive } = body;
+  const { id, featured, isPublished, name, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, status, trackingNumber, shippingCarrier, restockApproved, inspectionNotes, reply, isActive } = body;
   if (resource === "coupons") {
     if (!id || !hasRole(role, ["admin", "operations"]) || typeof isActive !== "boolean") return NextResponse.json({ error: "Cupón no válido." }, { status: 400 });
     const { data, error } = await supabase.from("promo_codes").update({ is_active: isActive }).eq("id", id).select("id, code, discount_type, discount_value, minimum_subtotal, starts_at, expires_at, max_uses, uses_count, is_active, created_at").single();
@@ -290,7 +294,7 @@ export async function PATCH(request: Request) {
   }
   if (!id) return NextResponse.json({ error: "Producto inválido." }, { status: 400 });
   if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  const update: { featured?: boolean; is_published?: boolean; name?: string; category?: string; price?: number; shipping_fee?: number; stock?: string; inventory_quantity?: number; image_url?: string; color_images?: Record<string, string>; color_prices?: Record<string, number>; gallery?: string[]; detail_images?: string[]; short_description?: string; description?: string; materials?: string[]; dimensions?: string; colors?: string[]; size_options?: string[] } = {};
+  const update: { featured?: boolean; is_published?: boolean; name?: string; category?: string; price?: number; shipping_fee?: number; stock?: string; inventory_quantity?: number; image_url?: string; color_images?: Record<string, string>; color_prices?: Record<string, number>; gallery?: string[]; detail_images?: string[]; short_description?: string; description?: string; translations?: ProductTranslations; materials?: string[]; dimensions?: string; colors?: string[]; size_options?: string[] } = {};
   if (typeof featured === "boolean") update.featured = featured;
   if (typeof isPublished === "boolean") update.is_published = isPublished;
   if (name !== undefined) {
@@ -342,6 +346,11 @@ export async function PATCH(request: Request) {
   }
   if (shortDescription !== undefined) update.short_description = shortDescription.trim();
   if (description !== undefined) update.description = description.trim();
+  if (translations !== undefined) {
+    const normalizedTranslations = normalizeProductTranslations(translations);
+    if (!normalizedTranslations) return NextResponse.json({ error: "Las traducciones del producto no son válidas." }, { status: 400 });
+    update.translations = normalizedTranslations;
+  }
   if (dimensions !== undefined) update.dimensions = dimensions.trim();
   if (materials !== undefined) {
     if (!Array.isArray(materials) || materials.some((item) => typeof item !== "string")) return NextResponse.json({ error: "Los materiales no son válidos." }, { status: 400 });
@@ -356,7 +365,7 @@ export async function PATCH(request: Request) {
     update.size_options = [...new Set(sizes.map((size) => size.trim()))];
   }
   if (Object.keys(update).length === 0) return NextResponse.json({ error: "No hay cambios para guardar." }, { status: 400 });
-  const { data, error } = await supabase.from("products").update(update).eq("id", id).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images").single();
+  const { data, error } = await supabase.from("products").update(update).eq("id", id).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images").single();
   if (error) return NextResponse.json({ error: "No se pudo actualizar el producto." }, { status: 500 });
   void recordAdminAction(supabase, adminEmail, "updated", "product", id, update);
   return NextResponse.json({ item: data });

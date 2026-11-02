@@ -1,3 +1,5 @@
+import type { ProductTranslations, ProductTranslationTextField } from "@/lib/product-translations";
+
 export type Locale = "en" | "zh" | "es";
 
 export const supportedLocales: Locale[] = ["en", "zh", "es"];
@@ -468,6 +470,25 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
 export function translateText(locale: Locale, text: string): string {
   if (locale === "es") return text;
   return translations[text]?.[locale] ?? text;
+}
+
+export function translateProductField(locale: Locale, translations: ProductTranslations | null | undefined, field: ProductTranslationTextField, original: string): string {
+  if (locale === "es") return original;
+  return translations?.[locale]?.[field]?.trim() || translateText(locale, original);
+}
+
+export function translateProductMaterials(locale: Locale, translations: ProductTranslations | null | undefined, materials: string[]): string[] {
+  if (locale === "es") return materials;
+  return materials.map((material) => {
+    const translated = translations?.[locale]?.materials;
+    return translated && Object.prototype.hasOwnProperty.call(translated, material) ? translated[material].trim() || translateText(locale, material) : translateText(locale, material);
+  });
+}
+
+export function translateProductColor(locale: Locale, translations: ProductTranslations | null | undefined, color: string): string {
+  if (locale === "es") return color;
+  const translated = translations?.[locale]?.colors;
+  return translated && Object.prototype.hasOwnProperty.call(translated, color) ? translated[color].trim() || translateText(locale, color) : translateText(locale, color);
 }
 
 export function normalizeLocale(value: string | undefined): Locale {

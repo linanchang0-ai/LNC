@@ -5,9 +5,10 @@ import { useCart } from "@/components/cart-provider";
 import { formatPrice } from "@/data/products";
 import { useState } from "react";
 import { useI18n } from "@/components/locale-provider";
+import { translateProductColor, translateProductField } from "@/lib/i18n";
 
 export default function CartPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { items, subtotal, shipping, updateQuantity, removeFromCart } = useCart();
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
@@ -37,16 +38,16 @@ export default function CartPage() {
             ) : (
               items.map((item) => (
                 <div key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`} className="cart-item">
-                  <img src={item.image} alt={t(item.name)} />
+                  <img src={item.image} alt={translateProductField(locale, item.translations, "name", item.name)} />
                   <div style={{ flex: 1 }}>
                     <div className="cart-item-head">
-                      <strong>{t(item.name)}</strong>
+                      <strong>{translateProductField(locale, item.translations, "name", item.name)}</strong>
                       <button className="text-button" onClick={() => removeFromCart(item.id, item.color, item.size)}>
                         {t("Eliminar")}
                       </button>
                     </div>
                     <div className="muted">{formatPrice(item.price)}</div>
-                    {item.color ? <div className="muted">{t("Color:")} {t(item.color)}</div> : null}
+                    {item.color ? <div className="muted">{t("Color:")} {translateProductColor(locale, item.translations, item.color)}</div> : null}
                     {item.size ? <div className="muted">{t("Talla:")} {item.size}</div> : null}
                     <div className="qty-row" style={{ marginTop: 10 }}>
                       <button aria-label={t("Reducir cantidad")} onClick={() => updateQuantity(item.id, item.color, item.size, -1)}>

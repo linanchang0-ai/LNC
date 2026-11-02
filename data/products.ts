@@ -1,3 +1,5 @@
+import type { ProductTranslations } from "@/lib/product-translations";
+
 export type Category = {
   slug: string;
   name: string;
@@ -20,6 +22,7 @@ export type Product = {
   description: string;
   materials: string[];
   dimensions: string;
+  translations?: ProductTranslations;
   colors: string[];
   sizes?: string[];
   details: string[];

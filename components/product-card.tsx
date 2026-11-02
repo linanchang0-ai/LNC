@@ -4,12 +4,13 @@ import Link from "next/link";
 import { formatPrice, type Product } from "@/data/products";
 import { useCart } from "@/components/cart-provider";
 import { useI18n } from "@/components/locale-provider";
+import { translateProductField } from "@/lib/i18n";
 
 export function ProductCard({ product }: { product: Product }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { addToCart } = useCart();
   const isOutOfStock = product.stock.toLowerCase().includes("agotado");
-  const productName = t(product.name);
+  const productName = translateProductField(locale, product.translations, "name", product.name);
 
   const addProduct = () => {
     if (isOutOfStock) return;
@@ -17,6 +18,7 @@ export function ProductCard({ product }: { product: Product }) {
       id: product.databaseId ?? product.id,
       slug: product.slug,
       name: product.name,
+      translations: product.translations,
       price: product.price,
       image: product.image,
     });
@@ -39,7 +41,7 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
       <div className="product-body">
         <h3><Link href={`/products/${product.slug}`}>{productName}</Link></h3>
-        <p>{t(product.shortDescription)}</p>
+        <p>{translateProductField(locale, product.translations, "shortDescription", product.shortDescription)}</p>
         <div className="product-rating" aria-label={t("5 de 5 estrellas")}>
           <span aria-hidden="true">★★★★★</span><span>5.0</span>
         </div>

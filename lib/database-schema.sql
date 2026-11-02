@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS products (
   old_price NUMERIC(10,2),
   short_description TEXT,
   description TEXT,
+  translations JSONB NOT NULL DEFAULT '{}'::jsonb,
   materials TEXT[],
   dimensions TEXT,
   colors TEXT[],
