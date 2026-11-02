@@ -15,6 +15,7 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "En stock": { en: "In stock", zh: "有货" },
   "Pocas unidades": { en: "Only a few left", zh: "库存不多" },
   "detalle": { en: "detail", zh: "细节" },
+  "Envío con seguimiento": { en: "Tracked shipping", zh: "物流配送" },
   "Procesado mediante plataformas de pago confiables.": { en: "Processed through trusted payment platforms.", zh: "通过可信赖的支付平台处理。" },
   "Consulta el estado de tu pedido cuando esté disponible.": { en: "Check your order status when tracking is available.", zh: "物流信息可用后即可查询订单状态。" },
   "Consulta las condiciones antes de realizar tu compra.": { en: "Review the terms before making your purchase.", zh: "购买前请查看相关条款。" },
