@@ -19,7 +19,7 @@ const faqItems = [
 
 export default async function HomePage() {
   const [products, categories, slides, carouselIntervalSeconds, locale] = await Promise.all([getCatalogProducts(), getCatalogCategories(), getHomepageSlides(), getHomepageCarouselIntervalSeconds(), getRequestLocale()]);
-  const t = (text: string) => translateText(text, locale);
+  const t = (text: string) => translateText(locale, text);
   const collections = categories.slice(0, 4);
   const featured = products.filter((product) => product.featured).slice(0, 4);
   return (
