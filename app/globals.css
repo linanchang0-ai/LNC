@@ -353,6 +353,20 @@ button {
   flex: 0 0 72px;
 }
 
+.product-image-order-help {
+  margin: 4px 0 8px;
+  color: var(--stone-500);
+  font-size: 0.78rem;
+}
+
+.product-image-item[draggable="true"] {
+  cursor: grab;
+}
+
+.product-image-item.is-dragging {
+  opacity: 0.45;
+}
+
 .product-image-thumb,
 .product-image-dropzone {
   position: relative;
@@ -364,6 +378,32 @@ button {
 
 .product-image-thumb {
   overflow: hidden;
+}
+
+.product-image-order {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 3px;
+  color: var(--stone-500);
+  font-size: 0.72rem;
+}
+
+.product-image-order button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text);
+  line-height: 1;
+}
+
+.product-image-order button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .product-image-remove {
@@ -422,6 +462,15 @@ button {
   .product-image-strip {
     gap: 10px;
     padding-bottom: 4px;
+  }
+
+  .product-image-item {
+    flex-basis: 82px;
+  }
+
+  .product-image-order button {
+    width: 32px;
+    height: 32px;
   }
 }
 

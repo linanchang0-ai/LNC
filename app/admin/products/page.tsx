@@ -3,7 +3,7 @@
 import { formatPrice } from "@/lib/admin-data";
 import { useAdminResource } from "@/components/admin-data-loader";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +116,7 @@ export default function AdminProductsPage() {
   const [saving, setSaving] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [draggedDetailImageIndex, setDraggedDetailImageIndex] = useState<number | null>(null);
   const [pendingPrimaryImages, setPendingPrimaryImages] = useState<File[]>([]);
   const [pendingDetailImages, setPendingDetailImages] = useState<File[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -185,6 +186,24 @@ export default function AdminProductsPage() {
 
   const removeImage = (imageIndex: number) => {
     setDraft((current) => ({ ...current, detailImages: current.detailImages.filter((_, index) => index !== imageIndex) }));
+  };
+
+  const moveDetailImage = (fromIndex: number, toIndex: number) => {
+    setDraft((current) => {
+      if (fromIndex < 0 || toIndex < 0 || fromIndex >= current.detailImages.length || toIndex >= current.detailImages.length) return current;
+      const detailImages = [...current.detailImages];
+      const [image] = detailImages.splice(fromIndex, 1);
+      detailImages.splice(toIndex, 0, image);
+      return { ...current, detailImages };
+    });
+  };
+
+  const handleDetailImageDrop = (event: DragEvent<HTMLDivElement>, targetIndex: number) => {
+    event.preventDefault();
+    const sourceIndexText = event.dataTransfer.getData("text/plain").trim();
+    const sourceIndex = Number(sourceIndexText);
+    if (sourceIndexText && Number.isInteger(sourceIndex)) moveDetailImage(sourceIndex, targetIndex);
+    setDraggedDetailImageIndex(null);
   };
 
   const uploadImages = async (files: FileList | File[], target: "primary" | "detail", color?: string) => {
@@ -435,9 +454,29 @@ export default function AdminProductsPage() {
             </div>
             <div className="product-image-group">
               <strong>详情图上传</strong>
+              <p className="product-image-order-help">拖动图片或使用箭头调整顺序，保存修改后应用到详情页。</p>
               <div className="product-image-strip-row">
                 <div className="product-image-strip" aria-label="商品详情图">
-                  {draft.detailImages.map((image, index) => <div className="product-image-item" key={`${image}-${index}`}><div className="product-image-thumb"><img src={image} alt={`${draft.name} 的详情图 ${index + 1}`} /><button type="button" className="product-image-remove" onClick={() => removeImage(index)} aria-label={`删除详情图 ${index + 1}`} title={`删除详情图 ${index + 1}`}>×</button></div></div>)}
+                  {draft.detailImages.map((image, index) => <div
+                    className={`product-image-item${draggedDetailImageIndex === index ? " is-dragging" : ""}`}
+                    key={`${image}-${index}`}
+                    draggable={!uploading && !saving}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", String(index));
+                      setDraggedDetailImageIndex(index);
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleDetailImageDrop(event, index)}
+                    onDragEnd={() => setDraggedDetailImageIndex(null)}
+                  >
+                    <div className="product-image-thumb"><img src={image} alt={`${draft.name} 的详情图 ${index + 1}`} /><button type="button" className="product-image-remove" onClick={() => removeImage(index)} aria-label={`删除详情图 ${index + 1}`} title={`删除详情图 ${index + 1}`}>×</button></div>
+                    <div className="product-image-order">
+                      <button type="button" onClick={() => moveDetailImage(index, index - 1)} disabled={index === 0 || uploading || saving} aria-label={`详情图 ${index + 1} 上移`} title="上移">↑</button>
+                      <span>{index + 1}</span>
+                      <button type="button" onClick={() => moveDetailImage(index, index + 1)} disabled={index === draft.detailImages.length - 1 || uploading || saving} aria-label={`详情图 ${index + 1} 下移`} title="下移">↓</button>
+                    </div>
+                  </div>)}
                 </div>
                 <label className={`product-image-dropzone${uploading ? " is-disabled" : ""}`}>{uploading ? "正在上传..." : "选择详情图"}<input className="product-image-file-input" type="file" accept="image/*" multiple disabled={uploading} onChange={(event) => handleFileChange(event, "detail")} /></label>
               </div>
