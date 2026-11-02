@@ -379,7 +379,7 @@ export default function AdminProductsPage() {
         {!loading && products.length === 0 ? <p className="muted">暂无商品。</p> : null}
         {error ? <p className="error-box">{error}</p> : null}
         {saveError ? <p className="error-box">{saveError}</p> : null}
-        {editorOpen ? <dialog ref={editorDialogRef} className="admin-product-modal-dialog" aria-labelledby="admin-product-editor-title" onCancel={(event) => { event.preventDefault(); closeEditor(); }} onClick={(event) => { if (event.target === event.currentTarget) closeEditor(); }}>
+        {editorOpen ? <dialog ref={editorDialogRef} className="admin-product-modal-dialog" aria-labelledby="admin-product-editor-title" onCancel={(event) => { if (event.target === event.currentTarget) event.preventDefault(); }} onClick={(event) => { if (event.target === event.currentTarget) closeEditor(); }}>
           <section className="form-card admin-product-modal">
           <div className="product-editor-heading"><h2 id="admin-product-editor-title">{creating ? "新增商品" : "编辑商品"}</h2><div className="product-editor-actions"><button className="small-button" type="button" onClick={() => void saveProduct(editingId ?? undefined)} disabled={saving || uploading}>{saving ? "正在保存..." : creating ? "创建商品" : "保存修改"}</button><button className="ghost-button" type="button" onClick={closeEditor} disabled={saving || uploading}>取消</button></div></div>
           {saveError ? <p className="error-box" role="alert">{saveError}</p> : null}
