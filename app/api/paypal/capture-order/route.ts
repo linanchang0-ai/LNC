@@ -3,6 +3,7 @@ import { capturePayPalOrder } from "@/lib/paypal-client";
 import { getSupabaseServerClient, tableNames } from "@/lib/supabase";
 import { sendOrderConfirmation } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
+import { notifyMerchantOfOrder } from "@/lib/order-notifications";
 
 export async function POST(request: Request) {
   const limited = await rateLimit(request, "paypal-capture-order", 20, 60_000);
@@ -28,9 +29,12 @@ export async function POST(request: Request) {
     if (!supabase) {
       return NextResponse.json({ error: "No se pudo conectar con la base de datos para guardar el pedido." }, { status: 503 });
     }
-    const { data: existingOrder, error: lookupError } = await supabase.from(tableNames.orders).select("id, order_number, paypal_capture_id, payment_status").eq("paypal_order_id", orderId).maybeSingle();
+    const { data: existingOrder, error: lookupError } = await supabase.from(tableNames.orders).select("id, order_number, paypal_capture_id, payment_status, guest_email, customer_name, total, currency").eq("paypal_order_id", orderId).maybeSingle();
     if (lookupError) return NextResponse.json({ error: "No se pudo verificar el registro del pedido antes de cobrar." }, { status: 503 });
-    if (existingOrder) return NextResponse.json({ captured: true, duplicate: true, captureId: existingOrder.paypal_capture_id, status: existingOrder.payment_status, orderNumber: existingOrder.order_number });
+    if (existingOrder) {
+      await notifyMerchantOfOrder(supabase, existingOrder);
+      return NextResponse.json({ captured: true, duplicate: true, captureId: existingOrder.paypal_capture_id, status: existingOrder.payment_status, orderNumber: existingOrder.order_number });
+    }
 
     const { data: draft, error: draftError } = await supabase.from("checkout_drafts").select("order_number, total, currency, status").eq("paypal_order_id", orderId).maybeSingle();
     if (draftError || !draft || draft.status !== "created") return NextResponse.json({ error: "El pedido de pago no es válido o ya fue procesado." }, { status: 400 });
@@ -65,6 +69,7 @@ export async function POST(request: Request) {
         })
         .catch(() => console.error("Order confirmation email request failed.", { orderId: orderData.id }));
     }
+    await notifyMerchantOfOrder(supabase, orderData);
 
     return NextResponse.json({ result, captured: true, captureId, status, orderNumber: orderData.order_number });
   } catch (error) {

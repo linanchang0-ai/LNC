@@ -31,6 +31,17 @@ export async function sendOrderConfirmation(order: OrderEmail) {
   return sendEmail(order.email, `Confirmación de pedido ${order.orderNumber}`, `<p>Hola ${name},</p><p>Recibimos tu pago y estamos preparando tu pedido <strong>${order.orderNumber}</strong>.</p><p>Total: <strong>${total}</strong></p><p>Te avisaremos cuando sea enviado.</p>`);
 }
 
+export async function sendNewOrderNotification(order: Omit<OrderEmail, "email"> & { email: string | null }) {
+  const recipient = process.env.ORDER_NOTIFICATION_EMAIL;
+  if (!recipient) return false;
+  const customerName = escapeHtml(order.customerName || "Cliente");
+  const customerEmail = escapeHtml(order.email || "No disponible");
+  const orderNumber = escapeHtml(order.orderNumber);
+  const total = new Intl.NumberFormat("es-MX", { style: "currency", currency: order.currency || "MXN" }).format(Number(order.total ?? 0));
+  const orderUrl = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://linanchang.com"}/admin/orders`;
+  return sendEmail(recipient, `Nuevo pedido ${order.orderNumber} - LNC SPORTS`, `<p>Se recibió un nuevo pedido pagado.</p><p>Pedido: <strong>${orderNumber}</strong></p><p>Cliente: ${customerName}</p><p>Correo del cliente: ${customerEmail}</p><p>Total: <strong>${escapeHtml(total)}</strong></p><p><a href="${escapeHtml(orderUrl)}">Abrir administración de pedidos</a></p>`);
+}
+
 export async function sendShippingNotification(order: OrderEmail & { shippingCarrier: string; trackingNumber: string }) {
   if (!order.email) return false;
   const name = order.customerName || "cliente";

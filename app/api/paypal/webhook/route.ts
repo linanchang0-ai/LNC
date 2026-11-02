@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient, tableNames } from "@/lib/supabase";
 import { verifyPayPalWebhook } from "@/lib/paypal-client";
 import { sendOrderConfirmation } from "@/lib/email";
+import { notifyMerchantOfOrder } from "@/lib/order-notifications";
 
 type CaptureResource = {
   id?: string;
   status?: string;
   amount?: { value?: string; currency_code?: string };
+  capture_id?: string;
+  update_time?: string;
+  seller_receivable_breakdown?: { total_refunded_amount?: { value?: string; currency_code?: string } };
   supplementary_data?: { related_ids?: { order_id?: string; capture_id?: string } };
 };
 
@@ -29,6 +33,7 @@ async function recordCapturedOrder(supabase: NonNullable<ReturnType<typeof getSu
       const sent = await sendOrderConfirmation({ email: order.guest_email, customerName: order.customer_name, orderNumber: order.order_number, total: order.total, currency: order.currency }).catch(() => false);
       if (sent) await supabase.from(tableNames.orders).update({ confirmation_email_sent_at: new Date().toISOString() }).eq("id", order.id).is("confirmation_email_sent_at", null);
     }
+    await notifyMerchantOfOrder(supabase, order);
     return;
   }
 
@@ -54,6 +59,156 @@ async function recordCapturedOrder(supabase: NonNullable<ReturnType<typeof getSu
     const sent = await sendOrderConfirmation({ email: order.guest_email, customerName: order.customer_name, orderNumber: order.order_number, total: order.total, currency: order.currency }).catch(() => false);
     if (sent) await supabase.from(tableNames.orders).update({ confirmation_email_sent_at: new Date().toISOString() }).eq("id", order.id).is("confirmation_email_sent_at", null);
   }
+  await notifyMerchantOfOrder(supabase, order);
+}
+
+async function recordRefund(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, resource: CaptureResource, eventType: string) {
+  if (!resource.id) throw new Error("PayPal refund event is missing its refund ID.");
+  const captureId = resource.supplementary_data?.related_ids?.capture_id ?? resource.capture_id;
+  if (!captureId) throw new Error("PayPal refund event is missing its capture ID.");
+
+  const status = resource.status ?? (eventType.slice(eventType.lastIndexOf(".") + 1) || "PENDING");
+  const amount = Number(resource.amount?.value);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("PayPal refund event has an invalid amount.");
+
+  const { data: existingRefund, error: existingRefundError } = await supabase
+    .from(tableNames.refunds)
+    .select("id, refund_status, refund_date")
+    .eq("refund_id", resource.id)
+    .maybeSingle();
+  if (existingRefundError) throw new Error("No se pudo consultar el reembolso de PayPal.");
+
+  const refundAlreadyCompleted = ["completed", "procesado"].includes((existingRefund?.refund_status ?? "").toLowerCase());
+  const refundNowCompleted = ["completed", "procesado"].includes(status.toLowerCase());
+  const update = {
+    capture_id: captureId,
+    refund_amount: amount,
+    refund_status: refundAlreadyCompleted && !refundNowCompleted ? existingRefund?.refund_status : status,
+    refund_date: refundNowCompleted ? new Date().toISOString() : existingRefund?.refund_date ?? null,
+  };
+  if (existingRefund) {
+    const { error } = await supabase.from(tableNames.refunds).update(update).eq("id", existingRefund.id);
+    if (error) throw new Error("No se pudo actualizar el reembolso de PayPal.");
+    await updateOrderRefundStatus(supabase, captureId);
+    return;
+  }
+
+  const { data: pendingRefund, error: pendingRefundError } = await supabase
+    .from(tableNames.refunds)
+    .select("id")
+    .eq("capture_id", captureId)
+    .eq("refund_status", "REQUESTED")
+    .is("refund_id", null)
+    .maybeSingle();
+  if (pendingRefundError) throw new Error("No se pudo buscar una solicitud de reembolso pendiente.");
+  if (pendingRefund) {
+    const { error } = await supabase.from(tableNames.refunds).update({ ...update, refund_id: resource.id }).eq("id", pendingRefund.id);
+    if (error) throw new Error("No se pudo vincular el reembolso de PayPal.");
+    await updateOrderRefundStatus(supabase, captureId);
+    return;
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from(tableNames.orders)
+    .select("id, paypal_order_id")
+    .eq("paypal_capture_id", captureId)
+    .maybeSingle();
+  if (orderError) throw new Error("No se pudo encontrar el pedido del reembolso de PayPal.");
+  if (!order) throw new Error("No se encontró el pedido asociado al reembolso de PayPal.");
+
+  const { error: insertError } = await supabase.from(tableNames.refunds).insert({
+    order_id: order.id,
+    paypal_order_id: order.paypal_order_id,
+    refund_id: resource.id,
+    ...update,
+  });
+  if (insertError) throw new Error("No se pudo registrar el reembolso externo de PayPal.");
+  await updateOrderRefundStatus(supabase, captureId);
+}
+
+async function updateOrderRefundStatus(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, captureId: string) {
+  const [{ data: order, error: orderError }, { data: refunds, error: refundsError }] = await Promise.all([
+    supabase.from(tableNames.orders).select("id, total").eq("paypal_capture_id", captureId).maybeSingle(),
+    supabase.from(tableNames.refunds).select("refund_amount, refund_status").eq("capture_id", captureId),
+  ]);
+  if (orderError || refundsError) throw new Error("No se pudo actualizar el estado del pedido reembolsado.");
+  if (!order) throw new Error("No se encontró el pedido asociado al reembolso de PayPal.");
+
+  const completedRefunds = (refunds ?? [])
+    .filter((refund) => ["completed", "procesado"].includes((refund.refund_status ?? "").toLowerCase()))
+    .reduce((sum, refund) => sum + Number(refund.refund_amount ?? 0), 0);
+  if (completedRefunds >= Number(order.total)) {
+    const { error } = await supabase.from(tableNames.orders).update({ payment_status: "Reembolsado" }).eq("id", order.id);
+    if (error) throw new Error("No se pudo actualizar el estado de pago reembolsado.");
+  }
+}
+
+async function recordCaptureRefund(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, resource: CaptureResource) {
+  if (!resource.id) throw new Error("PayPal capture refund event is missing its capture ID.");
+  const totalRefunded = Number(resource.seller_receivable_breakdown?.total_refunded_amount?.value
+    ?? (resource.status === "REFUNDED" ? resource.amount?.value : undefined));
+  if (!Number.isFinite(totalRefunded) || totalRefunded <= 0) throw new Error("PayPal capture refund event has an invalid refunded amount.");
+
+  const captureId = resource.id;
+  const reconciliationRefundId = `capture-refund-total:${captureId}`;
+  const { data: existingRefunds, error: refundsError } = await supabase
+    .from(tableNames.refunds)
+    .select("id, refund_id, refund_amount, refund_status")
+    .eq("capture_id", captureId);
+  if (refundsError) throw new Error("No se pudieron consultar los reembolsos del pedido.");
+
+  const reconciledRefund = (existingRefunds ?? []).find((refund) => refund.refund_id === reconciliationRefundId);
+  const completedRefunds = (existingRefunds ?? [])
+    .filter((refund) => refund.refund_id !== reconciliationRefundId && ["completed", "procesado"].includes((refund.refund_status ?? "").toLowerCase()))
+    .reduce((sum, refund) => sum + Number(refund.refund_amount ?? 0), 0);
+  let reconciliationAmount = Math.max(0, totalRefunded - completedRefunds);
+  for (const pendingRefund of (existingRefunds ?? []).filter((refund) =>
+    refund.refund_id !== reconciliationRefundId && ["requested", "pending"].includes((refund.refund_status ?? "").toLowerCase())
+  )) {
+    if (reconciliationAmount <= 0) break;
+    const refundAmount = Math.min(Number(pendingRefund.refund_amount ?? 0), reconciliationAmount);
+    if (refundAmount <= 0) continue;
+    const { error } = await supabase.from(tableNames.refunds).update({
+      refund_amount: refundAmount,
+      refund_status: "COMPLETED",
+      refund_date: resource.update_time ?? new Date().toISOString(),
+    }).eq("id", pendingRefund.id);
+    if (error) throw new Error("No se pudo confirmar la solicitud de reembolso conciliada.");
+    reconciliationAmount -= refundAmount;
+  }
+
+  if (reconciliationAmount === 0 && reconciledRefund) {
+    const { error } = await supabase.from(tableNames.refunds).delete().eq("id", reconciledRefund.id);
+    if (error) throw new Error("No se pudo conciliar el importe reembolsado.");
+  } else if (reconciliationAmount > 0) {
+    const reconciliation = {
+      capture_id: captureId,
+      refund_id: reconciliationRefundId,
+      refund_amount: reconciliationAmount,
+      refund_status: "COMPLETED",
+      refund_reason: "PayPal capture refund reconciliation",
+      refund_date: resource.update_time ?? new Date().toISOString(),
+    };
+    if (reconciledRefund) {
+      const { error } = await supabase.from(tableNames.refunds).update(reconciliation).eq("id", reconciledRefund.id);
+      if (error) throw new Error("No se pudo actualizar el importe reembolsado.");
+    } else {
+      const { data: order, error: orderError } = await supabase
+        .from(tableNames.orders)
+        .select("id, paypal_order_id")
+        .eq("paypal_capture_id", captureId)
+        .maybeSingle();
+      if (orderError) throw new Error("No se pudo encontrar el pedido reembolsado.");
+      if (!order) throw new Error("No se encontró el pedido asociado al reembolso de PayPal.");
+      const { error } = await supabase.from(tableNames.refunds).insert({
+        order_id: order.id,
+        paypal_order_id: order.paypal_order_id,
+        ...reconciliation,
+      });
+      if (error) throw new Error("No se pudo registrar el reembolso confirmado por PayPal.");
+    }
+  }
+  await updateOrderRefundStatus(supabase, captureId);
 }
 
 export async function POST(request: Request) {
@@ -79,35 +234,32 @@ export async function POST(request: Request) {
           status: "verified",
         },
       ]);
-      if (eventError?.code === "23505") return NextResponse.json({ received: true, eventId, eventType, status: "duplicate" });
-      if (eventError) throw new Error("No se pudo registrar el evento de PayPal.");
+      if (eventError?.code === "23505") {
+        const { data: existingEvent, error: existingEventError } = await supabase.from(tableNames.webhookEvents).select("status").eq("event_id", eventId).maybeSingle();
+        if (existingEventError) throw new Error("No se pudo comprobar el evento de PayPal.");
+        if (existingEvent?.status === "processed") return NextResponse.json({ received: true, eventId, eventType, status: "duplicate" });
+      } else if (eventError) {
+        throw new Error("No se pudo registrar el evento de PayPal.");
+      }
 
       const resource = event.resource as CaptureResource | undefined;
       const paypalOrderId = resource?.supplementary_data?.related_ids?.order_id;
-      if (eventType?.startsWith("PAYMENT.CAPTURE.") && paypalOrderId) {
-        const completed = eventType === "PAYMENT.CAPTURE.COMPLETED";
-        if (completed) {
-          await recordCapturedOrder(supabase, paypalOrderId, resource);
-        } else {
-          await supabase.from(tableNames.orders).update({ payment_status: resource?.status ?? "Pendiente", order_status: "Pendiente", paypal_capture_id: resource?.id ?? null }).eq("paypal_order_id", paypalOrderId);
-          await supabase.from(tableNames.payments).update({ status: resource?.status ?? "Pendiente", paypal_capture_id: resource?.id ?? null }).eq("paypal_order_id", paypalOrderId);
-        }
+      if (eventType === "PAYMENT.CAPTURE.COMPLETED" && paypalOrderId && resource) {
+        await recordCapturedOrder(supabase, paypalOrderId, resource);
+      } else if (eventType === "PAYMENT.CAPTURE.PENDING" && paypalOrderId && resource) {
+        const { error: orderUpdateError } = await supabase.from(tableNames.orders).update({ payment_status: resource.status ?? "Pendiente", order_status: "Pendiente", paypal_capture_id: resource.id ?? null }).eq("paypal_order_id", paypalOrderId);
+        const { error: paymentUpdateError } = await supabase.from(tableNames.payments).update({ status: resource.status ?? "Pendiente", paypal_capture_id: resource.id ?? null }).eq("paypal_order_id", paypalOrderId);
+        if (orderUpdateError || paymentUpdateError) throw new Error("No se pudo actualizar el estado del pago pendiente.");
+      } else if (eventType === "PAYMENT.CAPTURE.REFUNDED" && resource) {
+        await recordCaptureRefund(supabase, resource);
       }
       if (eventType?.startsWith("PAYMENT.REFUND.") && resource?.id) {
-        const { data: updatedRefunds } = await supabase
-          .from(tableNames.refunds)
-          .update({ refund_status: resource.status ?? eventType, refund_id: resource.id, refund_date: new Date().toISOString() })
-          .eq("refund_id", resource.id)
-          .select("id");
-        if (!updatedRefunds?.length && resource.supplementary_data?.related_ids?.capture_id) {
-          await supabase
-            .from(tableNames.refunds)
-            .update({ refund_status: resource.status ?? eventType, refund_id: resource.id, refund_date: new Date().toISOString() })
-            .eq("capture_id", resource.supplementary_data.related_ids.capture_id)
-            .eq("refund_status", "REQUESTED")
-            .is("refund_id", null);
-        }
+        await recordRefund(supabase, resource, eventType);
       }
+      const { error: processedError } = await supabase.from(tableNames.webhookEvents).update({ status: "processed" }).eq("event_id", eventId);
+      if (processedError) throw new Error("No se pudo marcar el evento de PayPal como procesado.");
+    } else {
+      return NextResponse.json({ received: false, error: "Database not configured" }, { status: 503 });
     }
 
     return NextResponse.json({

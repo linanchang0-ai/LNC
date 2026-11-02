@@ -22,8 +22,8 @@ export default function AdminHomePage() {
 
   const paidOrders = state.orders.filter((order) => order.payment_status === "Pagado");
   const totalRevenue = paidOrders.reduce((sum, order) => sum + order.total, 0);
-  const pendingOrders = state.orders.filter((order) => order.order_status === "Pendiente").length;
-  const totalRefunds = state.refunds.filter((refund) => ["COMPLETED", "Procesado"].includes(refund.refund_status ?? "")).reduce((sum, refund) => sum + Number(refund.refund_amount ?? 0), 0);
+  const pendingOrders = state.orders.filter((order) => ["Pendiente", "Procesando"].includes(order.order_status ?? "") && order.payment_status === "Pagado").length;
+  const totalRefunds = state.refunds.filter((refund) => ["completed", "procesado"].includes((refund.refund_status ?? "").toLowerCase())).reduce((sum, refund) => sum + Number(refund.refund_amount ?? 0), 0);
   const thirtyDaysAgo = dashboardLoadedAt - 30 * 24 * 60 * 60 * 1000;
   const recentPaidOrders = paidOrders.filter((order) => new Date(order.created_at).getTime() >= thirtyDaysAgo);
   const lowStockProducts = state.products.filter((product) => product.is_published && (product.inventory_quantity ?? 0) <= 5);

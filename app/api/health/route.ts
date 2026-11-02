@@ -7,6 +7,7 @@ export async function GET() {
   const supabase = getSupabaseServerClient();
   let databaseReady = false;
   const emailConfigured = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+  const orderNotificationsConfigured = Boolean(emailConfigured && process.env.ORDER_NOTIFICATION_EMAIL);
   const globalRateLimitConfigured = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
   const errorMonitoringConfigured = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
 
@@ -26,6 +27,7 @@ export async function GET() {
       database: databaseReady ? "ready" : "unavailable",
       payments: environment.ok ? "configured" : "unavailable",
       email: emailConfigured ? "configured" : "not_configured",
+      orderNotifications: orderNotificationsConfigured ? "configured" : "not_configured",
       rateLimit: globalRateLimitConfigured ? "global" : "local_fallback",
       errorMonitoring: errorMonitoringConfigured ? "configured" : "not_configured",
     },
