@@ -67,13 +67,17 @@ export async function GET(request: Request) {
     if (orderError) return NextResponse.json({ error: "No se pudo cargar el pedido." }, { status: 500 });
     if (!order) return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
     const [items, returns, refunds] = await Promise.all([
-      supabase.from("order_items").select("id, product_name, price, quantity").eq("order_id", id),
+      supabase.from("order_items").      select("id, product_id, product_name, price, quantity").eq("order_id", id),
       supabase.from("returns").select("id, reason, description, status, inspection_notes, restock_approved, created_at, restocked_at").eq("order_id", id).order("created_at", { ascending: false }),
       supabase.from("refunds").select("id, refund_amount, refund_status, refund_reason, refund_date, created_at").eq("order_id", id).order("created_at", { ascending: false }),
     ]);
     if (items.error || returns.error || refunds.error) return NextResponse.json({ error: "No se pudieron cargar los detalles del pedido." }, { status: 500 });
+    const productIds = [...new Set((items.data ?? []).map((item) => item.product_id).filter(Boolean))];
+    const { data: productImages } = productIds.length ? await supabase.from("products").select("id, image_url, gallery").in("id", productIds) : { data: [] };
+    const imageById = new Map((productImages ?? []).map((product) => [product.id, product.image_url || product.gallery?.[0] || null]));
+    const itemsWithImages = (items.data ?? []).map(({ product_id: productId, ...item }) => ({ ...item, image_url: imageById.get(productId) ?? null }));
     const { shipping_label_path: labelPath, ...orderFields } = order;
-    return NextResponse.json({ item: { ...orderFields, shipping_label_url: await signShippingLabel(supabase, labelPath), items: items.data ?? [], returns: returns.data ?? [], refunds: refunds.data ?? [] } });
+    return NextResponse.json({ item: { ...orderFields, shipping_label_url: await signShippingLabel(supabase, labelPath), items: itemsWithImages, returns: returns.data ?? [], refunds: refunds.data ?? [] } });
   }
 
   if (resource === "order-report") {
