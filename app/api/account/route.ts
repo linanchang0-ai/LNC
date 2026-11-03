@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createAdminDataClient } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { signShippingLabel } from "@/lib/shipping-labels";
 
 function requestCookies(request: Request) {
   return request.headers.get("cookie")?.split(";").map((part) => {
@@ -44,15 +45,16 @@ export async function GET(request: Request) {
   if (resource === "order") {
     const orderNumber = new URL(request.url).searchParams.get("orderNumber");
     if (!orderNumber) return NextResponse.json({ error: "Pedido no válido." }, { status: 400 });
-    const { data, error } = await database.from("orders").select("id, order_number, total, currency, order_status, payment_status, shipping_address, tracking_number, shipping_carrier, shipped_at, created_at").or(`user_id.eq.${user.id},guest_email.eq.${user.email ?? ""}`).eq("order_number", orderNumber).maybeSingle();
+    const { data, error } = await database.from("orders").select("id, order_number, total, currency, order_status,     payment_status, shipping_address, tracking_number, shipping_carrier, shipped_at, shipping_label_path, created_at").or(`user_id.eq.${user.id},guest_email.eq.${user.email ?? ""}`).eq("order_number", orderNumber).maybeSingle();
     if (error) return NextResponse.json({ error: "No se pudo cargar el pedido." }, { status: 500 });
     if (!data) return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
+        const { shipping_label_path: labelPath, ...order } = data;
     const [returns, refunds, items] = await Promise.all([
       database.from("returns").select("status").eq("order_id", data.id).order("created_at", { ascending: false }).limit(1),
       database.from("refunds").select("refund_status").eq("order_id", data.id).order("created_at", { ascending: false }).limit(1),
       database.from("order_items").select("product_name, price, quantity").eq("order_id", data.id),
     ]);
-    return NextResponse.json({ item: { ...data, return_status: returns.data?.[0]?.status ?? null, refund_status: refunds.data?.[0]?.refund_status ?? null, items: items.data ?? [] } });
+    return NextResponse.json({ item: { ...order, shipping_label_url: await signShippingLabel(database, labelPath), return_status: returns.data?.[0]?.status ?? null, refund_status: refunds.data?.[0]?.refund_status ?? null, items: items.data ?? [] } });
   }
   if (resource === "addresses") {
     const { data, error } = await database.from("addresses").select("id, state, city, postal_code, neighborhood, street, number, created_at").eq("user_id", user.id).order("created_at", { ascending: false });

@@ -344,6 +344,7 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Se asignará al enviar el pedido": { en: "Will be assigned when the order ships", zh: "订单发货时分配" },
   "Se asignará al enviar": { en: "Will be assigned when shipped", zh: "发货时分配" },
   "Guía": { en: "Tracking number", zh: "物流单号" },
+  "Guía de envío": { en: "Shipping label", zh: "物流面单" },
   "Enviado": { en: "Shipped", zh: "已发货" },
   "Productos": { en: "Products", zh: "商品" },
   "Producto": { en: "Product", zh: "商品" },

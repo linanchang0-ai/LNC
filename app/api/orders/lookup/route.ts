@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient, tableNames } from "@/lib/supabase";
 import { rateLimit } from "@/lib/rate-limit";
+import { signShippingLabel } from "@/lib/shipping-labels";
 
 export async function POST(request: Request) {
   const limited = await rateLimit(request, "guest-order-lookup", 8, 15 * 60_000);
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
     const database = getSupabaseServerClient();
     if (!database) return NextResponse.json({ error: "La consulta de pedidos no está disponible." }, { status: 503 });
     const { data: order, error } = await database.from(tableNames.orders)
-      .select("id, order_number, total, currency, order_status, payment_status, tracking_number, shipping_carrier, shipped_at, created_at")
+      .select("id, order_number, total, currency, order_status, payment_status, tracking_number, shipping_carrier, shipped_at, shipping_label_path, created_at")
       .eq("order_number", normalizedOrderNumber)
       .ilike("guest_email", normalizedEmail)
       .maybeSingle();
@@ -26,7 +27,8 @@ export async function POST(request: Request) {
 
     const { data: items, error: itemsError } = await database.from(tableNames.orderItems).select("product_name, price, quantity").eq("order_id", order.id);
     if (itemsError) return NextResponse.json({ error: "No se pudo cargar el detalle del pedido." }, { status: 500 });
-    return NextResponse.json({ item: { ...order, items: items ?? [] } });
+    const { shipping_label_path: labelPath, ...publicOrder } = order;
+    return NextResponse.json({ item: { ...publicOrder, shipping_label_url: await signShippingLabel(database, labelPath), items: items ?? [] } });
   } catch {
     return NextResponse.json({ error: "No se pudo consultar el pedido." }, { status: 500 });
   }

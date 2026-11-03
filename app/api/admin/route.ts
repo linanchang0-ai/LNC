@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminAuthClient, createAdminDataClient, getAdminRole, type AdminRole } from "@/lib/admin-auth";
 import { sendContactReply, sendShippingNotification } from "@/lib/email";
+import { signShippingLabel } from "@/lib/shipping-labels";
 import { normalizeProductTranslations, type ProductTranslations } from "@/lib/product-translations";
 
 function requestCookies(request: Request) {
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
   if (resource === "order") {
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Pedido no válido." }, { status: 400 });
-    const { data: order, error: orderError } = await supabase.from("orders").select("id, order_number, customer_name, guest_email, phone, shipping_address, total, currency, order_status, payment_status, paypal_order_id, paypal_capture_id, tracking_number, shipping_carrier, shipped_at, created_at").eq("id", id).maybeSingle();
+    const { data: order, error: orderError } = await supabase.from("orders").select("id, order_number, customer_name, guest_email, phone, shipping_address, total, currency, order_status, payment_status, paypal_order_id, paypal_capture_id, tracking_number, shipping_carrier, shipped_at, shipping_label_path, created_at").eq("id", id).maybeSingle();
     if (orderError) return NextResponse.json({ error: "No se pudo cargar el pedido." }, { status: 500 });
     if (!order) return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
     const [items, returns, refunds] = await Promise.all([
@@ -71,7 +72,8 @@ export async function GET(request: Request) {
       supabase.from("refunds").select("id, refund_amount, refund_status, refund_reason, refund_date, created_at").eq("order_id", id).order("created_at", { ascending: false }),
     ]);
     if (items.error || returns.error || refunds.error) return NextResponse.json({ error: "No se pudieron cargar los detalles del pedido." }, { status: 500 });
-    return NextResponse.json({ item: { ...order, items: items.data ?? [], returns: returns.data ?? [], refunds: refunds.data ?? [] } });
+    const { shipping_label_path: labelPath, ...orderFields } = order;
+    return NextResponse.json({ item: { ...orderFields, shipping_label_url: await signShippingLabel(supabase, labelPath), items: items.data ?? [], returns: returns.data ?? [], refunds: refunds.data ?? [] } });
   }
 
   if (resource === "order-report") {

@@ -16,13 +16,15 @@ export default function AdminOrdersPage() {
   const [fulfillment, setFulfillment] = useState({ status: "Procesando", carrier: "", trackingNumber: "" });
   const [fulfillmentError, setFulfillmentError] = useState("");
   const [savingFulfillment, setSavingFulfillment] = useState(false);
-  const [detail, setDetail] = useState<{ id: string; order_number: string; customer_name: string | null; guest_email: string | null; phone: string | null; shipping_address: AdminOrder["shipping_address"]; total: number; payment_status: string | null; paypal_order_id: string | null; paypal_capture_id: string | null; items: Array<{ id: string; product_name: string | null; price: number | null; quantity: number | null }>; returns: Array<{ id: string; reason: string | null; description: string | null; status: string | null; created_at: string; restocked_at: string | null }>; refunds: Array<{ id: string; refund_amount: number | null; refund_status: string | null; refund_reason: string | null; refund_date: string | null; created_at: string }> } | null>(null);
+  const [detail, setDetail] = useState<{ id: string; order_number: string; customer_name: string | null; guest_email: string | null; phone: string | null; shipping_address: AdminOrder["shipping_address"]; total: number; payment_status: string | null; paypal_order_id: string | null; paypal_capture_id: string | null; shipping_label_url?: string | null; items: Array<{ id: string; product_name: string | null; price: number | null; quantity: number | null }>; returns: Array<{ id: string; reason: string | null; description: string | null; status: string | null; created_at: string; restocked_at: string | null }>; refunds: Array<{ id: string; refund_amount: number | null; refund_status: string | null; refund_reason: string | null; refund_date: string | null; created_at: string }> } | null>(null);
   const [detailError, setDetailError] = useState("");
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [refundAmount, setRefundAmount] = useState("");
   const [refundReason, setRefundReason] = useState("");
   const [refundError, setRefundError] = useState("");
   const [refunding, setRefunding] = useState(false);
+  const [labelBusy, setLabelBusy] = useState(false);
+  const [labelError, setLabelError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
 
@@ -101,6 +103,54 @@ export default function AdminOrdersPage() {
       setFulfillmentError(saveError instanceof Error ? saveError.message : "物流信息更新失败。");
     } finally {
       setSavingFulfillment(false);
+    }
+  };
+
+  const shrinkLabelImage = async (file: File) => {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+    if (!blob) throw new Error("图片处理失败，请换一张图片。");
+    return new File([blob], "shipping-label.jpg", { type: "image/jpeg" });
+  };
+
+  const uploadLabel = async (file: File | undefined) => {
+    if (!file || !detail) return;
+    setLabelBusy(true);
+    setLabelError("");
+    try {
+      const form = new FormData();
+      form.set("orderId", detail.id);
+      form.set("image", await shrinkLabelImage(file));
+      const response = await fetch("/api/admin/shipping-label", { method: "POST", body: form });
+      const data = await response.json() as { url?: string; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "面单上传失败。");
+      setDetail((current) => current ? { ...current, shipping_label_url: data.url ?? null } : current);
+    } catch (uploadError) {
+      setLabelError(uploadError instanceof Error ? uploadError.message : "面单上传失败。");
+    } finally {
+      setLabelBusy(false);
+    }
+  };
+
+  const removeLabel = async () => {
+    if (!detail || !window.confirm("确定删除这张面单照片吗？客户将不再看到它。")) return;
+    setLabelBusy(true);
+    setLabelError("");
+    try {
+      const response = await fetch(`/api/admin/shipping-label?orderId=${encodeURIComponent(detail.id)}`, { method: "DELETE" });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "删除失败。");
+      setDetail((current) => current ? { ...current, shipping_label_url: null } : current);
+    } catch (removeError) {
+      setLabelError(removeError instanceof Error ? removeError.message : "删除失败。");
+    } finally {
+      setLabelBusy(false);
     }
   };
 
@@ -190,6 +240,13 @@ export default function AdminOrdersPage() {
           {detail.shipping_address ? <div className="meta-row"><span>Entrega</span><span>{[detail.shipping_address.street, detail.shipping_address.number, detail.shipping_address.neighborhood, detail.shipping_address.city, detail.shipping_address.state, detail.shipping_address.postalCode].filter(Boolean).join(", ")}</span></div> : null}
           <h3 style={{ marginTop: 18 }}>Productos</h3>
           {detail.items.map((item) => <div className="meta-row" key={item.id}><span>{item.product_name ?? "Producto"} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
+          <h3 style={{ marginTop: 18 }}>物流面单（客户可见）</h3>
+          {detail.shipping_label_url ? <a href={detail.shipping_label_url} target="_blank" rel="noopener noreferrer"><img src={detail.shipping_label_url} alt="物流面单" style={{ display: "block", width: "100%", maxWidth: 320, borderRadius: 8, border: "1px solid var(--line)" }} /></a> : <p className="muted">还没有上传面单照片。</p>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+            <label className="small-button" style={{ cursor: "pointer" }}>{labelBusy ? "处理中..." : detail.shipping_label_url ? "重新上传" : "上传面单照片"}<input type="file" accept="image/*" hidden disabled={labelBusy} onChange={(event) => { void uploadLabel(event.target.files?.[0]); event.target.value = ""; }} /></label>
+            {detail.shipping_label_url ? <button type="button" className="small-button" onClick={() => void removeLabel()} disabled={labelBusy}>删除面单</button> : null}
+          </div>
+          {labelError ? <p className="error-box">{labelError}</p> : null}
           {detail.returns.length ? <><h3 style={{ marginTop: 18 }}>Devoluciones</h3>{detail.returns.map((item) => <div className="meta-row" key={item.id}><span>{item.reason ?? "Devolución"}: {item.status ?? "Pendiente"}</span><span>{item.restocked_at ? "Inventario repuesto" : ""}</span></div>)}</> : null}
           {detail.refunds.length ? <><h3 style={{ marginTop: 18 }}>Reembolsos</h3>{detail.refunds.map((item) => <div className="meta-row" key={item.id}><span>{item.refund_reason ?? "Reembolso"}: {item.refund_status ?? "Pendiente"}</span><span>{formatPrice(Number(item.refund_amount ?? 0))}</span></div>)}</> : null}
           {detail.payment_status === "Pagado" && detail.paypal_capture_id ? <><h3 style={{ marginTop: 18 }}>Solicitar reembolso</h3><div className="form-grid"><label>Importe<input type="number" min="0.01" max={detail.total} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} placeholder={`Máximo ${formatPrice(detail.total)}`} /></label><label>Motivo<input value={refundReason} onChange={(event) => setRefundReason(event.target.value)} placeholder="Motivo del reembolso" /></label></div><button className="small-button" onClick={() => void refundFromDetail()} disabled={refunding}>{refunding ? "Procesando" : "Solicitar reembolso"}</button>{refundError ? <p className="error-box">{refundError}</p> : null}</> : null}

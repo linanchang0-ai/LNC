@@ -9,7 +9,7 @@ import { useI18n } from "@/components/locale-provider";
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { locale, t } = useI18n();
   const { id } = use(params);
-  const [order, setOrder] = useState<{ order_number: string; total: number; currency: string; order_status: string | null; payment_status: string | null; return_status: string | null; refund_status: string | null; shipping_address: Record<string, string> | null; items: Array<{ product_name: string | null; price: number | null; quantity: number | null }>; tracking_number: string | null; shipping_carrier: string | null; shipped_at: string | null; created_at: string } | null>(null);
+  const [order, setOrder] = useState<{ order_number: string; total: number; currency: string; order_status: string | null; payment_status: string | null; return_status: string | null; refund_status: string | null; shipping_address: Record<string, string> | null; items: Array<{ product_name: string | null; price: number | null; quantity: number | null }>; tracking_number: string | null; shipping_carrier: string | null; shipped_at: string | null; shipping_label_url?: string | null; created_at: string } | null>(null);
   const [error, setError] = useState("");
   useEffect(() => { fetch(`/api/account?resource=order&orderNumber=${encodeURIComponent(id)}`).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setOrder(data.item); }).catch((requestError: Error) => setError(requestError.message)); }, [id]);
 
@@ -32,6 +32,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div className="meta-row"><span>{t("Paquetería")}</span><span>{t(order.shipping_carrier ?? "Se asignará al enviar el pedido")}</span></div>
         <div className="meta-row"><span>{t("Guía")}</span><span>{order.tracking_number ? <TrackingLink carrier={order.shipping_carrier} trackingNumber={order.tracking_number} /> : t("Se asignará al enviar el pedido")}</span></div>
         {order.shipped_at ? <div className="meta-row"><span>{t("Enviado")}</span><span>{new Date(order.shipped_at).toLocaleDateString(locale === "zh" ? "zh-CN" : locale === "en" ? "en-US" : "es-MX")}</span></div> : null}
+        {order.shipping_label_url ? <div style={{ marginTop: 14 }}><span className="muted">{t("Guía de envío")}</span><a href={order.shipping_label_url} target="_blank" rel="noopener noreferrer"><img src={order.shipping_label_url} alt={t("Guía de envío")} style={{ display: "block", width: "100%", maxWidth: 420, marginTop: 8, borderRadius: 8, border: "1px solid var(--line)" }} /></a></div> : null}
       </div>
 
       <section className="form-card" style={{ maxWidth: 700, marginTop: 16 }}>

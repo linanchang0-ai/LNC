@@ -15,6 +15,7 @@ type Order = {
   tracking_number: string | null;
   shipping_carrier: string | null;
   shipped_at: string | null;
+  shipping_label_url?: string | null;
   created_at: string;
   items: Array<{ product_name: string | null; price: number | null; quantity: number | null }>;
 };
@@ -62,6 +63,7 @@ export default function OrderLookupPage() {
       <div className="meta-row"><span>{t("Paquetería")}</span><span>{t(order.shipping_carrier ?? "Se asignará al enviar")}</span></div>
       <div className="meta-row"><span>{t("Guía")}</span><span>{order.tracking_number ? <TrackingLink carrier={order.shipping_carrier} trackingNumber={order.tracking_number} /> : t("Se asignará al enviar")}</span></div>
       {order.shipped_at ? <div className="meta-row"><span>{t("Enviado")}</span><span>{new Date(order.shipped_at).toLocaleDateString(locale === "zh" ? "zh-CN" : locale === "en" ? "en-US" : "es-MX")}</span></div> : null}
+      {order.shipping_label_url ? <div style={{ marginTop: 14 }}><span className="muted">{t("Guía de envío")}</span><a href={order.shipping_label_url} target="_blank" rel="noopener noreferrer"><img src={order.shipping_label_url} alt={t("Guía de envío")} style={{ display: "block", width: "100%", maxWidth: 420, marginTop: 8, borderRadius: 8, border: "1px solid var(--line)" }} /></a></div> : null}
       <h2 style={{ marginTop: 22 }}>{t("Productos")}</h2>
       {order.items.map((item, index) => <div className="meta-row" key={`${item.product_name}-${index}`}><span>{item.product_name ? t(item.product_name) : t("Producto")} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
     </section> : null}
