@@ -174,6 +174,7 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Procesando...": { en: "Processing...", zh: "处理中…" },
   "Pagar con PayPal": { en: "Pay with PayPal", zh: "使用 PayPal 支付" },
   "Añadir al carrito": { en: "Add to cart", zh: "加入购物车" },
+  "Añadido": { en: "Added", zh: "已加入" },
   "Elegir talla": { en: "Choose a size", zh: "选择尺码" },
   "Agotado": { en: "Sold out", zh: "售罄" },
   "Volver a productos": { en: "Back to products", zh: "返回商品列表" },

@@ -31,6 +31,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [activeImage, setActiveImage] = useState(product?.gallery[0] ?? "");
   const [selectedColor, setSelectedColor] = useState(product?.colors[0] ?? "");
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, number>>({});
+  const [addedNotice, setAddedNotice] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const { toggle, isSaved } = useWishlist();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -103,6 +104,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     for (const line of lines) for (let index = 0; index < line.count; index += 1) addToCart({ ...base, size: line.size });
     // Meta Pixel: AddToCart
     metaEvents.addToCart({ content_name: product.name, content_ids: [product.databaseId ?? product.id], content_type: "product", value: selectedPrice * totalQuantity, currency: "MXN", quantity: totalQuantity });
+    setSizeQuantities({});
+    setQuantity(1);
+    setAddedNotice(true);
+    window.setTimeout(() => setAddedNotice(false), 2000);
     return true;
   };
 
@@ -186,7 +191,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               disabled={isOutOfStock || totalQuantity < 1}
               onClick={() => { addSelectionToCart(); }}
             >
-              {isOutOfStock ? t("Agotado") : t("Añadir al carrito")}
+              {isOutOfStock ? t("Agotado") : addedNotice ? `✓ ${t("Añadido")}` : t("Añadir al carrito")}
             </button>
             <button
               className="secondary-button"
