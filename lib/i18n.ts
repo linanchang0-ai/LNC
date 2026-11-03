@@ -231,6 +231,8 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Destacado": { en: "Featured", zh: "精选" },
   "Revisa tu selección antes de pagar y confirma los datos de entrega.": { en: "Review your selection before checkout and confirm your delivery details.", zh: "结账前请检查商品并确认配送信息。" },
   "TU CARRITO": { en: "YOUR CART", zh: "您的购物车" },
+  "Vaciar carrito": { en: "Clear cart", zh: "清空购物车" },
+  "¿Vaciar todo el carrito?": { en: "Remove all items from your cart?", zh: "确定清空购物车吗？" },
   "Checkout progress": { en: "Checkout progress", zh: "结账进度" },
   "Pago": { en: "Payment", zh: "支付" },
   "Revisión": { en: "Review", zh: "确认" },

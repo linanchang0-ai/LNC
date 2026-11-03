@@ -10,7 +10,7 @@ import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 
 export default function CartPage() {
   const { t, locale } = useI18n();
-  const { items, subtotal, shipping, discount, couponCode, couponError, couponPending, total, updateQuantity, removeFromCart, applyCoupon, clearCoupon } = useCart();
+  const { items, subtotal, shipping, discount, couponCode, couponError, couponPending, total, updateQuantity, removeFromCart, clearCart, applyCoupon, clearCoupon } = useCart();
   const [coupon, setCoupon] = useState(couponCode ?? "");
   const [couponMessage, setCouponMessage] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -56,6 +56,12 @@ export default function CartPage() {
       <div className="cart-layout">
         <div className="form-card cart-card">
           <div className="list">
+            {items.length > 0 ? (
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button type="button" className="text-button" onClick={() => { if (window.confirm(t("¿Vaciar todo el carrito?"))) { clearCart(); setCoupon(""); setCouponMessage(""); } }}>{t("Vaciar carrito")}</button>
+              </div>
+            ) : null}
+            {items.length === 0 ? (
             {items.length === 0 ? (
               <div className="empty-state">
                 <div className="muted">{t("Tu carrito está vacío. Explora nuestra colección seleccionada.")}</div>
