@@ -107,8 +107,8 @@ export default function CheckoutPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: paypalOrderId }),
         });
-        if (!response.ok) throw new Error("Payment confirmation failed");
-        const captureData = await response.json() as { orderNumber?: string };
+        const captureData = await response.json() as { orderNumber?: string; error?: string };
+        if (!response.ok) throw new Error(captureData.error ?? "Payment confirmation failed");
         if (!captureData.orderNumber) throw new Error("The confirmed payment did not include an order number.");
         clearCart();
         setCaptureMessage(t("Pago confirmado. Gracias por tu pedido."));

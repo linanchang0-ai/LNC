@@ -113,6 +113,35 @@ export async function capturePayPalOrder(orderId: string) {
   return captureResponse.json();
 }
 
+export async function getPayPalOrder(orderId: string) {
+  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+  const environment = process.env.PAYPAL_ENVIRONMENT === "production" ? "https://api.paypal.com" : "https://api-m.sandbox.paypal.com";
+
+  if (!clientId || !clientSecret) {
+    throw new Error("PayPal credentials are missing");
+  }
+
+  const tokenResponse = await fetch(`${environment}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  if (!tokenResponse.ok) throw new Error("Unable to fetch PayPal access token");
+
+  const tokenData = await tokenResponse.json() as { access_token: string };
+  const orderResponse = await fetch(`${environment}/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    cache: "no-store",
+  });
+  if (!orderResponse.ok) throw new Error(`PayPal order lookup failed: ${await orderResponse.text()}`);
+
+  return orderResponse.json();
+}
+
 export async function refundPayPalCapture(captureId: string, amount?: number, requestId?: string) {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;

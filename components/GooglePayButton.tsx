@@ -110,11 +110,8 @@ export default function GooglePayButton({ onSuccess, onError, checkoutData, disa
           body: JSON.stringify({ orderId: paypalOrderId }),
         });
 
-        if (!captureResponse.ok) {
-          throw new Error("No se pudo capturar el pago");
-        }
-
-        const captureData = await captureResponse.json() as { orderNumber?: string };
+        const captureData = await captureResponse.json() as { orderNumber?: string; error?: string };
+        if (!captureResponse.ok) throw new Error(captureData.error ?? "No se pudo confirmar el pago. No vuelvas a pagar todavía; contacta con soporte.");
         if (!captureData.orderNumber) throw new Error("El pago se confirmó, pero no se recibió el número del pedido.");
         onSuccess(captureData.orderNumber);
         return { transactionState: "SUCCESS" };

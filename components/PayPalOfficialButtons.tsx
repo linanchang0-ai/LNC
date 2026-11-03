@@ -54,8 +54,8 @@ export default function PayPalOfficialButtons({ fundingSource, onSuccess, onErro
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: data.orderID, items: currentItems.map((item) => ({ productId: String(item.id), productName: item.name, size: item.size, price: item.price, quantity: item.quantity })) }),
         });
-        if (!response.ok) throw new Error("No se pudo confirmar el pago.");
-        const captureData = await response.json() as { orderNumber?: string };
+        const captureData = await response.json() as { orderNumber?: string; error?: string };
+        if (!response.ok) throw new Error(captureData.error ?? "No se pudo confirmar el pago. No vuelvas a pagar todavía; contacta con soporte.");
         if (!captureData.orderNumber) throw new Error("El pago se confirmó, pero no se recibió el número del pedido.");
         latestValuesRef.current.onSuccess(captureData.orderNumber);
       },

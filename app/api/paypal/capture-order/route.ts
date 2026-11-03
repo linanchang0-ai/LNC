@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { capturePayPalOrder } from "@/lib/paypal-client";
+import { capturePayPalOrder, getPayPalOrder } from "@/lib/paypal-client";
 import { getSupabaseServerClient, tableNames } from "@/lib/supabase";
 import { sendOrderConfirmation } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
@@ -39,13 +39,24 @@ export async function POST(request: Request) {
     const { data: draft, error: draftError } = await supabase.from("checkout_drafts").select("order_number, total, currency, status").eq("paypal_order_id", orderId).maybeSingle();
     if (draftError || !draft || draft.status !== "created") return NextResponse.json({ error: "El pedido de pago no es válido o ya fue procesado." }, { status: 400 });
 
-    const result = await capturePayPalOrder(orderId);
-    const captureId = result.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
-    const status = result.status ?? "COMPLETED";
-    const total = Number(result.purchase_units?.[0]?.amount?.value ?? 0);
-    const referenceId = result.purchase_units?.[0]?.reference_id;
-    if (status !== "COMPLETED" || referenceId !== draft.order_number || total !== Number(draft.total) || result.purchase_units?.[0]?.amount?.currency_code !== draft.currency) {
-      return NextResponse.json({ error: "La confirmación de PayPal no coincide con el pedido." }, { status: 400 });
+    let result: Awaited<ReturnType<typeof capturePayPalOrder>>;
+    try {
+      result = await capturePayPalOrder(orderId);
+    } catch (captureError) {
+      const recoveredOrder = await getPayPalOrder(orderId).catch(() => null);
+      if (recoveredOrder?.status !== "COMPLETED") throw captureError;
+      result = recoveredOrder;
+    }
+    const purchaseUnit = result.purchase_units?.[0];
+    const capture = purchaseUnit?.payments?.captures?.[0];
+    const captureId = capture?.id ?? null;
+    const status = capture?.status ?? result.status;
+    const total = Number(capture?.amount?.value ?? purchaseUnit?.amount?.value ?? 0);
+    const currency = capture?.amount?.currency_code ?? purchaseUnit?.amount?.currency_code;
+    const referenceId = purchaseUnit?.reference_id;
+    if (status !== "COMPLETED" || !captureId || referenceId !== draft.order_number || total !== Number(draft.total) || currency !== draft.currency) {
+      console.error("PayPal reports a completed capture that does not match the checkout draft.", { orderId, status, referenceId, total, currency });
+      return NextResponse.json({ error: "PayPal indica que el pago se completó, pero no pudimos validarlo con el pedido. No vuelvas a pagar; contacta con soporte." }, { status: 409 });
     }
 
     const { data: recordedOrders, error: recordError } = await supabase.rpc("record_captured_order", {
@@ -55,7 +66,23 @@ export async function POST(request: Request) {
     });
     const orderData = recordedOrders?.[0];
     if (recordError || !orderData) {
-      return NextResponse.json({ error: recordError?.message ?? "No se pudo guardar el pedido." }, { status: 500 });
+      const { data: concurrentlyRecordedOrder, error: recoveryError } = await supabase
+        .from(tableNames.orders)
+        .select("id, order_number, paypal_capture_id, payment_status, guest_email, customer_name, total, currency")
+        .eq("paypal_order_id", orderId)
+        .maybeSingle();
+      if (!recoveryError && concurrentlyRecordedOrder) {
+        await notifyMerchantOfOrder(supabase, concurrentlyRecordedOrder);
+        return NextResponse.json({
+          captured: true,
+          duplicate: true,
+          captureId: concurrentlyRecordedOrder.paypal_capture_id ?? captureId,
+          status: concurrentlyRecordedOrder.payment_status,
+          orderNumber: concurrentlyRecordedOrder.order_number,
+        });
+      }
+      console.error("PayPal capture completed but order recording failed.", { orderId, captureId, code: recordError?.code, message: recordError?.message });
+      return NextResponse.json({ error: "PayPal confirmó el pago, pero el pedido aún se está sincronizando. No vuelvas a pagar. Si no aparece en unos minutos, contacta con soporte." }, { status: 503 });
     }
     if (orderData.guest_email) {
       void sendOrderConfirmation({ email: orderData.guest_email, customerName: orderData.customer_name, orderNumber: orderData.order_number, total: orderData.total, currency: orderData.currency })
@@ -73,9 +100,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ result, captured: true, captureId, status, orderNumber: orderData.order_number });
   } catch (error) {
+    console.error("PayPal capture confirmation failed.", { error: error instanceof Error ? error.message : "Unknown error" });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "No pudimos confirmar tu pago." },
-      { status: 500 },
+      { error: "No pudimos verificar el estado del pago con PayPal. No vuelvas a pagar todavía; revisa tu cuenta PayPal o contacta con soporte." },
+      { status: 502 },
     );
   }
 }
