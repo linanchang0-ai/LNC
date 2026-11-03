@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { useI18n } from "@/components/locale-provider";
+import { siteConfig } from "@/lib/site-config";
 import { usePathname } from "next/navigation";
 import { translateText } from "@/lib/i18n";
 
@@ -11,6 +12,8 @@ export function Footer() {
   const pathname = usePathname();
   const locale = pathname?.startsWith("/admin") ? "zh" : selectedLocale;
   const t = (text: string) => translateText(locale, text);
+  const whatsappHref = siteConfig.whatsappNumber ? `https://wa.me/${siteConfig.whatsappNumber}` : "/contact";
+  const whatsappProps = siteConfig.whatsappNumber ? { target: "_blank", rel: "noopener noreferrer" } : {};
   return (
     <footer className="footer">
       <div className="container-shell footer-grid">
@@ -37,7 +40,7 @@ export function Footer() {
         <div>
           <h3 className="footer-title">{t("Atención al cliente")}</h3>
           <div className="footer-links">
-            <Link href="/contact">{t("Contacto")}</Link>
+            <Link href={whatsappHref} {...whatsappProps}>{t("Contacto")}</Link>
             <Link href="/order-lookup">{t("Consulta tu pedido")}</Link>
             <Link href="/shipping">{t("Política de envíos")}</Link>
             <Link href="/returns-policy">{t("Devoluciones y reembolsos")}</Link>
@@ -59,7 +62,7 @@ export function Footer() {
             <Link href="/shipping">{t("Política de envíos")}</Link>
             <Link href="/returns-policy">{t("Política de devoluciones")}</Link>
             <Link href="/payments">{t("Política de pagos")}</Link>
-            <Link href="/contact">{t("Contacto")}</Link>
+            <Link href={whatsappHref} {...whatsappProps}>{t("Contacto")}</Link>
             <Link href="/privacy">{t("Política de privacidad")}</Link>
             <Link href="/cookies">{t("Cookies")}</Link>
           </div>

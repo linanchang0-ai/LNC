@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/components/locale-provider";
 import { supportedLocales } from "@/lib/i18n";
 import { usePathname } from "next/navigation";
+import { siteConfig } from "@/lib/site-config";
 import { translateProductColor, translateProductField, translateText } from "@/lib/i18n";
 
 const desktopNav = [
@@ -15,6 +16,8 @@ const desktopNav = [
   { href: "/#productos-destacados", label: "Destacados" },
   { href: "/about", label: "Nosotros" },
 ];
+
+const whatsappHref = siteConfig.whatsappNumber ? `https://wa.me/${siteConfig.whatsappNumber}` : "/contact";
 
 const mobileSections = [
   {
@@ -29,7 +32,7 @@ const mobileSections = [
     title: "NOSOTROS",
     links: [
       { href: "/about", label: "Nuestra historia" },
-      { href: "/contact", label: "Contacto" },
+      { href: whatsappHref, label: "Contacto" },
     ],
   },
   {
@@ -224,7 +227,7 @@ export function Header() {
             <h3>{t(group.title)}</h3>
             <div className="mobile-links">
               {group.links.map((link) => (
-                <Link key={link.label} href={link.href} onClick={() => setMobileOpen(false)}>
+                <Link key={link.label} href={link.href} onClick={() => setMobileOpen(false)} {...(link.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
                   {t(link.label)}
                 </Link>
               ))}

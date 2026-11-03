@@ -10,6 +10,7 @@ import { TrustSignals } from "@/components/trust-signals";
 import { useWishlist } from "@/components/wishlist";
 import { metaEvents } from "@/components/MetaPixel";
 import { useI18n } from "@/components/locale-provider";
+import { siteConfig } from "@/lib/site-config";
 import { translateProductColor, translateProductField, translateProductMaterials } from "@/lib/i18n";
 
 function imageForColor(product: Product, color: string) {
@@ -209,7 +210,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           </div>
           <div className="detail-actions" style={{ marginTop: 12 }}>
             <button className={`ghost-button ${isSaved(product.id) ? "is-saved" : ""}`} onClick={() => toggle(product.id, product.slug)}>{isSaved(product.id) ? `♥ ${t("Guardado")}` : `♡ ${t("Favoritos")}`}</button>
-            <Link href="/contact" className="ghost-button">{t("Consultar sobre este producto")}</Link>
+            <Link href={siteConfig.whatsappNumber ? `https://wa.me/${siteConfig.whatsappNumber}` : "/contact"} {...(siteConfig.whatsappNumber ? { target: "_blank", rel: "noopener noreferrer" } : {})} className="ghost-button">{t("Consultar sobre este producto")}</Link>
           </div>
         </aside>
       </div>
