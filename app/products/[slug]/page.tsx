@@ -5,7 +5,7 @@ import { notFound, useRouter } from "next/navigation";
 import { formatPrice, type Product } from "@/data/products";
 import { ContactButton } from "@/components/ContactButton";
 import { useCart } from "@/components/cart-provider";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState, type TouchEvent } from "react";
 import { TrustSignals } from "@/components/trust-signals";
 import { useWishlist } from "@/components/wishlist";
 import { metaEvents } from "@/components/MetaPixel";
@@ -33,6 +33,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0] ?? "");
   const [zoomOpen, setZoomOpen] = useState(false);
   const { toggle, isSaved } = useWishlist();
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -73,6 +74,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     if (matchingColor) setSelectedColor(matchingColor);
   };
 
+  const showAdjacentImage = (direction: 1 | -1) => {
+    const index = product.gallery.indexOf(activeImage);
+    const next = product.gallery[(Math.max(index, 0) + direction + product.gallery.length) % product.gallery.length];
+    if (next) selectImage(next);
+  };
+
+  const swipeHandlers = {
+    onTouchStart: (event: TouchEvent) => { touchStart.current = { x: event.touches[0].clientX, y: event.touches[0].clientY }; },
+    onTouchEnd: (event: TouchEvent) => {
+      const start = touchStart.current;
+      touchStart.current = null;
+      if (!start || product.gallery.length < 2) return;
+      const dx = event.changedTouches[0].clientX - start.x;
+      const dy = event.changedTouches[0].clientY - start.y;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) showAdjacentImage(dx < 0 ? 1 : -1);
+    },
+  };
+
   const handleBackToProducts = () => {
     if (window.history.length > 1) {
       router.back();
@@ -100,7 +119,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
       <div className="product-detail-layout">
         <div className="gallery-grid">
-          <button type="button" className="gallery-main-image" onClick={() => setZoomOpen(true)} aria-label={t("Ampliar imagen del producto")}><img src={activeImage} alt={productName} /></button>
+          <button type="button" className="gallery-main-image" style={{ touchAction: "pan-y" }} {...swipeHandlers} onClick={() => setZoomOpen(true)} aria-label={t("Ampliar imagen del producto")}><img src={activeImage} alt={productName} /></button>
           <div className="gallery-thumbnails">
             {product.gallery.map((image, index) => <button type="button" key={`${product.slug}-${index}`} className={activeImage === image ? "is-active" : ""} onClick={() => selectImage(image)} aria-label={`${t("Ver imagen")} ${index + 1} ${t("de")} ${productName}`}><img src={image} alt={`${productName} ${t("miniatura")} ${index + 1}`} /></button>)}
           </div>
@@ -224,7 +243,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         <button type="button" className="ghost-button" onClick={handleBackToProducts}>{t("Volver a productos")}</button>
       </div>
       <ContactButton />
-      {zoomOpen ? <div className="image-lightbox" role="dialog" aria-modal="true" aria-label={t("Vista previa de la imagen del producto")} onClick={() => setZoomOpen(false)}><button type="button" aria-label={t("Cerrar vista previa de la imagen")} onClick={() => setZoomOpen(false)}>×</button><img src={activeImage} alt={productName} /></div> : null}
+      {zoomOpen ? <div className="image-lightbox" role="dialog" aria-modal="true" style={{ touchAction: "pan-y" }} {...swipeHandlers} aria-label={t("Vista previa de la imagen del producto")} onClick={() => setZoomOpen(false)}><button type="button" aria-label={t("Cerrar vista previa de la imagen")} onClick={() => setZoomOpen(false)}>×</button><img src={activeImage} alt={productName} /></div> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
     </div>
   );
