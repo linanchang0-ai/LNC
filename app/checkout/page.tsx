@@ -275,9 +275,10 @@ export default function CheckoutPage() {
             <span className="eyebrow subdued">{t("Resumen")}</span>
             <h3 style={{ marginTop: 0 }}>{t("Resumen del pedido")}</h3>
             <div className="checkout-item-list">
-              {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`}>
-                <span>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
-                <span>{formatPrice(item.price * item.quantity)}</span>
+              {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`} style={{ alignItems: "center", gap: 12 }}>
+                {item.image ? <img src={item.image} alt={translateProductField(locale, item.translations, "name", item.name)} style={{ width: 64, height: 64, flex: "0 0 auto", objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} /> : null}
+                <span style={{ flex: 1, minWidth: 0 }}>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
+                <span style={{ whiteSpace: "nowrap" }}>{formatPrice(item.price * item.quantity)}</span>
               </div>)}
             </div>
             <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
@@ -313,9 +314,10 @@ export default function CheckoutPage() {
               {expressError ? <p style={{ color: "#dc2626", fontSize: 14, margin: "8px 0" }} role="alert">{expressError}</p> : null}
 
               <div className="checkout-item-list">
-                {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`}>
-                  <span>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
-                  <span>{formatPrice(item.price * item.quantity)}</span>
+                              {items.map((item) => <div className="meta-row" key={`${item.id}-${item.color ?? "default"}-${item.size ?? "default"}`} style={{ alignItems: "center", gap: 12 }}>
+                                {item.image ? <img src={item.image} alt={translateProductField(locale, item.translations, "name", item.name)} style={{ width: 64, height: 64, flex: "0 0 auto", objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} /> : null}
+                                <span style={{ flex: 1, minWidth: 0 }}>{translateProductField(locale, item.translations, "name", item.name)}{item.color ? ` · ${translateProductColor(locale, item.translations, item.color)}` : ""}{item.size ? ` · ${t("Talla")} ${t(item.size)}` : ""} × {item.quantity}</span>
+                                <span style={{ whiteSpace: "nowrap" }}>{formatPrice(item.price * item.quantity)}</span>
                 </div>)}
               </div>
               <div className="meta-row"><span>{t("Subtotal")}</span><span>{formatPrice(subtotal)}</span></div>
