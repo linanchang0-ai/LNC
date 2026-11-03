@@ -12,7 +12,13 @@ type CaptureResource = {
   update_time?: string;
   seller_receivable_breakdown?: { total_refunded_amount?: { value?: string; currency_code?: string } };
   supplementary_data?: { related_ids?: { order_id?: string; capture_id?: string } };
+  links?: { rel?: string; href?: string }[];
 };
+
+function getRelatedCaptureId(resource: CaptureResource) {
+  const captureLink = resource.links?.find((link) => link.rel === "up")?.href;
+  return captureLink?.match(/^https:\/\/api(?:-m)?(?:\.sandbox)?\.paypal\.com\/v2\/payments\/captures\/([^/?#]+)\/?$/)?.[1];
+}
 
 async function recordCapturedOrder(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, paypalOrderId: string, resource: CaptureResource) {
   const { data: existingOrder, error: existingOrderError } = await supabase
@@ -64,10 +70,12 @@ async function recordCapturedOrder(supabase: NonNullable<ReturnType<typeof getSu
 
 async function recordRefund(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, resource: CaptureResource, eventType: string) {
   if (!resource.id) throw new Error("PayPal refund event is missing its refund ID.");
-  const captureId = resource.supplementary_data?.related_ids?.capture_id ?? resource.capture_id;
+  const captureId = resource.supplementary_data?.related_ids?.capture_id ?? resource.capture_id ?? getRelatedCaptureId(resource);
   if (!captureId) throw new Error("PayPal refund event is missing its capture ID.");
 
-  const status = resource.status ?? (eventType.slice(eventType.lastIndexOf(".") + 1) || "PENDING");
+  const reportedStatus = resource.status ?? (eventType.slice(eventType.lastIndexOf(".") + 1) || "PENDING");
+  const refundNowCompleted = ["completed", "procesado", "refunded"].includes(reportedStatus.toLowerCase());
+  const status = refundNowCompleted ? "COMPLETED" : reportedStatus;
   const amount = Number(resource.amount?.value);
   if (!Number.isFinite(amount) || amount <= 0) throw new Error("PayPal refund event has an invalid amount.");
 
@@ -78,13 +86,12 @@ async function recordRefund(supabase: NonNullable<ReturnType<typeof getSupabaseS
     .maybeSingle();
   if (existingRefundError) throw new Error("No se pudo consultar el reembolso de PayPal.");
 
-  const refundAlreadyCompleted = ["completed", "procesado"].includes((existingRefund?.refund_status ?? "").toLowerCase());
-  const refundNowCompleted = ["completed", "procesado"].includes(status.toLowerCase());
+  const refundAlreadyCompleted = ["completed", "procesado", "refunded"].includes((existingRefund?.refund_status ?? "").toLowerCase());
   const update = {
     capture_id: captureId,
     refund_amount: amount,
     refund_status: refundAlreadyCompleted && !refundNowCompleted ? existingRefund?.refund_status : status,
-    refund_date: refundNowCompleted ? new Date().toISOString() : existingRefund?.refund_date ?? null,
+    refund_date: refundNowCompleted ? resource.update_time ?? new Date().toISOString() : existingRefund?.refund_date ?? null,
   };
   if (existingRefund) {
     const { error } = await supabase.from(tableNames.refunds).update(update).eq("id", existingRefund.id);
@@ -251,7 +258,11 @@ export async function POST(request: Request) {
         const { error: paymentUpdateError } = await supabase.from(tableNames.payments).update({ status: resource.status ?? "Pendiente", paypal_capture_id: resource.id ?? null }).eq("paypal_order_id", paypalOrderId);
         if (orderUpdateError || paymentUpdateError) throw new Error("No se pudo actualizar el estado del pago pendiente.");
       } else if (eventType === "PAYMENT.CAPTURE.REFUNDED" && resource) {
-        await recordCaptureRefund(supabase, resource);
+        if (getRelatedCaptureId(resource)) {
+          await recordRefund(supabase, resource, eventType);
+        } else {
+          await recordCaptureRefund(supabase, resource);
+        }
       }
       if (eventType?.startsWith("PAYMENT.REFUND.") && resource?.id) {
         await recordRefund(supabase, resource, eventType);

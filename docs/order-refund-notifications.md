@@ -9,5 +9,6 @@ Run `supabase/migrations/20261103060000_add_order_notifications.sql` in the Supa
 ## PayPal refunds
 
 Configure the PayPal webhook at `/api/paypal/webhook` to deliver `PAYMENT.CAPTURE.REFUNDED` events. The handler records external PayPal refunds as well as refunds initiated from the store, and retries events that previously failed processing.
+For PayPal refund resources, the handler resolves the associated capture from the resource's `up` link and records the refund as completed.
 
 Refunds completed before this change will not be replayed automatically. Resend the corresponding `PAYMENT.CAPTURE.REFUNDED` event from PayPal's webhook event history so the store can reconcile it.
