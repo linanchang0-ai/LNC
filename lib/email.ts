@@ -48,6 +48,13 @@ export async function sendShippingNotification(order: OrderEmail & { shippingCar
   return sendEmail(order.email, `Tu pedido ${order.orderNumber} fue enviado`, `<p>Hola ${name},</p><p>Tu pedido <strong>${order.orderNumber}</strong> ya fue enviado.</p><p>Paquetería: <strong>${order.shippingCarrier}</strong><br>Guía: <strong>${order.trackingNumber}</strong></p>`);
 }
 
+export async function sendRefundNotification(order: OrderEmail & { refundAmount: number }) {
+  if (!order.email) return false;
+  const name = escapeHtml(order.customerName || "cliente");
+  const amount = new Intl.NumberFormat("es-MX", { style: "currency", currency: order.currency || "MXN" }).format(order.refundAmount);
+  return sendEmail(order.email, `Reembolso de tu pedido ${order.orderNumber}`, `<p>Hola ${name},</p><p>Procesamos un reembolso de <strong>${escapeHtml(amount)}</strong> para tu pedido <strong>${escapeHtml(order.orderNumber)}</strong>.</p><p>PayPal lo reflejará en tu método de pago original; puede tardar unos días hábiles.</p><p>Equipo LNC SPORTS</p>`);
+}
+
 export async function sendContactReply({ email, customerName, message }: { email: string; customerName: string; message: string }) {
   return sendEmail(email, "Respuesta de LNC SPORTS", `<p>Hola ${escapeHtml(customerName)},</p><p>${escapeHtml(message).replace(/\n/g, "<br>")}</p><p>Equipo LNC SPORTS</p>`);
 }

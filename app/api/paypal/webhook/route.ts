@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient, tableNames } from "@/lib/supabase";
 import { verifyPayPalWebhook } from "@/lib/paypal-client";
-import { sendOrderConfirmation } from "@/lib/email";
+import { sendOrderConfirmation, sendRefundNotification } from "@/lib/email";
 import { notifyMerchantOfOrder } from "@/lib/order-notifications";
 
 type CaptureResource = {
@@ -68,6 +68,12 @@ async function recordCapturedOrder(supabase: NonNullable<ReturnType<typeof getSu
   await notifyMerchantOfOrder(supabase, order);
 }
 
+async function notifyCustomerOfRefund(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, captureId: string, refundAmount: number) {
+  const { data: order } = await supabase.from(tableNames.orders).select("order_number, guest_email, customer_name, currency").eq("paypal_capture_id", captureId).maybeSingle();
+  if (!order?.guest_email) return;
+  await sendRefundNotification({ email: order.guest_email, customerName: order.customer_name, orderNumber: order.order_number, currency: order.currency, refundAmount }).catch(() => false);
+}
+
 async function recordRefund(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, resource: CaptureResource, eventType: string) {
   if (!resource.id) throw new Error("PayPal refund event is missing its refund ID.");
   const captureId = resource.supplementary_data?.related_ids?.capture_id ?? resource.capture_id ?? getRelatedCaptureId(resource);
@@ -97,6 +103,7 @@ async function recordRefund(supabase: NonNullable<ReturnType<typeof getSupabaseS
     const { error } = await supabase.from(tableNames.refunds).update(update).eq("id", existingRefund.id);
     if (error) throw new Error("No se pudo actualizar el reembolso de PayPal.");
     await updateOrderRefundStatus(supabase, captureId);
+    if (refundNowCompleted && !refundAlreadyCompleted) await notifyCustomerOfRefund(supabase, captureId, amount);
     return;
   }
 
@@ -112,6 +119,7 @@ async function recordRefund(supabase: NonNullable<ReturnType<typeof getSupabaseS
     const { error } = await supabase.from(tableNames.refunds).update({ ...update, refund_id: resource.id }).eq("id", pendingRefund.id);
     if (error) throw new Error("No se pudo vincular el reembolso de PayPal.");
     await updateOrderRefundStatus(supabase, captureId);
+    if (refundNowCompleted) await notifyCustomerOfRefund(supabase, captureId, amount);
     return;
   }
 
@@ -131,6 +139,7 @@ async function recordRefund(supabase: NonNullable<ReturnType<typeof getSupabaseS
   });
   if (insertError) throw new Error("No se pudo registrar el reembolso externo de PayPal.");
   await updateOrderRefundStatus(supabase, captureId);
+  if (refundNowCompleted) await notifyCustomerOfRefund(supabase, captureId, amount);
 }
 
 async function updateOrderRefundStatus(supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>, captureId: string) {
