@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useCart } from "@/components/cart-provider";
+import { confirmPayPalOrderCapture } from "@/lib/paypal-capture";
 import type { CheckoutDraftInput } from "@/components/ExpressCheckout";
 
 type GooglePayPaymentData = {
@@ -104,16 +105,8 @@ export default function GooglePayButton({ onSuccess, onError, checkoutData, disa
           throw new Error("El pago no fue aprobado");
         }
 
-        const captureResponse = await fetch("/api/paypal/capture-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: paypalOrderId }),
-        });
-
-        const captureData = await captureResponse.json() as { orderNumber?: string; error?: string };
-        if (!captureResponse.ok) throw new Error(captureData.error ?? "No se pudo confirmar el pago. No vuelvas a pagar todavía; contacta con soporte.");
-        if (!captureData.orderNumber) throw new Error("El pago se confirmó, pero no se recibió el número del pedido.");
-        onSuccess(captureData.orderNumber);
+        const orderNumber = await confirmPayPalOrderCapture(paypalOrderId);
+        onSuccess(orderNumber);
         return { transactionState: "SUCCESS" };
       } catch (err) {
         onError(err instanceof Error ? err.message : "Error en el pago con Google Pay");

@@ -289,6 +289,7 @@ export async function POST(request: Request) {
       status: "processed",
     });
   } catch (error) {
+    console.error("PayPal webhook processing failed.", { error: error instanceof Error ? error.message : "Unknown error" });
     return NextResponse.json(
       { received: false, error: error instanceof Error ? error.message : "Webhook processing failed" },
       { status: 500 },

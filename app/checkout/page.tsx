@@ -11,6 +11,7 @@ import type { AddressFields } from "@/lib/address-parser";
 import { metaEvents } from "@/components/MetaPixel";
 import { useI18n } from "@/components/locale-provider";
 import { translateProductColor, translateProductField } from "@/lib/i18n";
+import { confirmPayPalOrderCapture } from "@/lib/paypal-capture";
 
 export default function CheckoutPage() {
   const { t, locale } = useI18n();
@@ -102,20 +103,13 @@ export default function CheckoutPage() {
       setLoading(true);
       setCaptureMessage(t("Confirmando tu pago con PayPal..."));
       try {
-        const response = await fetch("/api/paypal/capture-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: paypalOrderId }),
-        });
-        const captureData = await response.json() as { orderNumber?: string; error?: string };
-        if (!response.ok) throw new Error(captureData.error ?? "Payment confirmation failed");
-        if (!captureData.orderNumber) throw new Error("The confirmed payment did not include an order number.");
+        const orderNumber = await confirmPayPalOrderCapture(paypalOrderId);
         clearCart();
         setCaptureMessage(t("Pago confirmado. Gracias por tu pedido."));
-        setConfirmedOrderNumber(captureData.orderNumber);
+        setConfirmedOrderNumber(orderNumber);
         // Meta Pixel: Purchase
-        metaEvents.purchase(total, "MXN", { order_id: captureData.orderNumber });
-        router.replace(`/checkout?status=confirmed&order=${encodeURIComponent(captureData.orderNumber)}`);
+        metaEvents.purchase(total, "MXN", { order_id: orderNumber });
+        router.replace(`/checkout?status=confirmed&order=${encodeURIComponent(orderNumber)}`);
       } catch {
         setCaptureMessage(t("No pudimos confirmar el pago todavía. Contacta con soporte antes de intentarlo de nuevo."));
       } finally {

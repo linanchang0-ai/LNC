@@ -37,7 +37,30 @@ export async function POST(request: Request) {
     }
 
     const { data: draft, error: draftError } = await supabase.from("checkout_drafts").select("order_number, total, currency, status").eq("paypal_order_id", orderId).maybeSingle();
-    if (draftError || !draft || draft.status !== "created") return NextResponse.json({ error: "El pedido de pago no es válido o ya fue procesado." }, { status: 400 });
+    if (draftError) {
+      console.error("Could not load checkout draft before capture.", { orderId, message: draftError.message });
+      return NextResponse.json({ error: "No pudimos comprobar el pedido. No vuelvas a pagar; intenta actualizar esta página o contacta con soporte." }, { status: 503 });
+    }
+    if (!draft) return NextResponse.json({ error: "No encontramos el pedido de pago. No vuelvas a pagar; contacta con soporte." }, { status: 404 });
+    if (draft.status !== "created") {
+      const { data: recordedOrder, error: recordedOrderError } = await supabase
+        .from(tableNames.orders)
+        .select("id, order_number, paypal_capture_id, payment_status, guest_email, customer_name, total, currency")
+        .eq("paypal_order_id", orderId)
+        .maybeSingle();
+      if (!recordedOrderError && recordedOrder) {
+        await notifyMerchantOfOrder(supabase, recordedOrder);
+        return NextResponse.json({
+          captured: true,
+          duplicate: true,
+          captureId: recordedOrder.paypal_capture_id,
+          status: recordedOrder.payment_status,
+          orderNumber: recordedOrder.order_number,
+        });
+      }
+      if (recordedOrderError) console.error("Could not recover order after checkout draft was already processed.", { orderId, message: recordedOrderError.message });
+      return NextResponse.json({ error: "El pago ya está siendo procesado. No vuelvas a pagar; actualiza esta página en un momento o contacta con soporte." }, { status: 503 });
+    }
 
     let result: Awaited<ReturnType<typeof capturePayPalOrder>>;
     try {

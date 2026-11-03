@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useCart } from "@/components/cart-provider";
+import { confirmPayPalOrderCapture } from "@/lib/paypal-capture";
 import type { CheckoutDraftInput } from "@/components/ExpressCheckout";
 
 declare class ApplePaySession {
@@ -168,17 +169,9 @@ export default function ApplePayButton({ onSuccess, onError, checkoutData, disab
           }
 
           // Capture order
-          const captureResponse = await fetch("/api/paypal/capture-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: paypalOrderId }),
-          });
-
-          const captureData = await captureResponse.json() as { orderNumber?: string; error?: string };
-          if (!captureResponse.ok) throw new Error(captureData.error ?? "No se pudo confirmar el pago. No vuelvas a pagar todavía; contacta con soporte.");
-          if (!captureData.orderNumber) throw new Error("El pago se confirmó, pero no se recibió el número del pedido.");
+          const orderNumber = await confirmPayPalOrderCapture(paypalOrderId);
           session.completePayment(ApplePaySessionConstructor.STATUS_SUCCESS);
-          onSuccess(captureData.orderNumber);
+          onSuccess(orderNumber);
         } catch (err) {
           session.completePayment(ApplePaySessionConstructor.STATUS_FAILURE);
           onError(err instanceof Error ? err.message : "Error en el pago con Apple Pay");

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCart } from "@/components/cart-provider";
 import type { CheckoutDraftInput } from "@/components/ExpressCheckout";
+import { confirmPayPalOrderCapture } from "@/lib/paypal-capture";
 
 type PayPalOfficialButtonsProps = {
   fundingSource?: string;
@@ -48,16 +49,8 @@ export default function PayPalOfficialButtons({ fundingSource, onSuccess, onErro
         return data.id;
       },
       onApprove: async (data: { orderID: string }) => {
-        const currentItems = latestValuesRef.current.items;
-        const response = await fetch("/api/paypal/capture-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: data.orderID, items: currentItems.map((item) => ({ productId: String(item.id), productName: item.name, size: item.size, price: item.price, quantity: item.quantity })) }),
-        });
-        const captureData = await response.json() as { orderNumber?: string; error?: string };
-        if (!response.ok) throw new Error(captureData.error ?? "No se pudo confirmar el pago. No vuelvas a pagar todavía; contacta con soporte.");
-        if (!captureData.orderNumber) throw new Error("El pago se confirmó, pero no se recibió el número del pedido.");
-        latestValuesRef.current.onSuccess(captureData.orderNumber);
+        const orderNumber = await confirmPayPalOrderCapture(data.orderID);
+        latestValuesRef.current.onSuccess(orderNumber);
       },
       onCancel: () => undefined,
       onError: (error: Error) => latestValuesRef.current.onError(error.message || "El pago no pudo completarse."),
