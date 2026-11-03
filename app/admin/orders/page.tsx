@@ -75,6 +75,7 @@ export default function AdminOrdersPage() {
       const data = await response.json() as { item?: NonNullable<typeof detail>; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error ?? "订单详情加载失败。");
       setDetail(data.item);
+      setTimeout(() => document.getElementById("order-detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       setRefundAmount("");
       setRefundReason("");
     } catch (loadError) {
@@ -221,7 +222,7 @@ export default function AdminOrdersPage() {
                   <td>{editingId === order.id ? <select value={fulfillment.status} onChange={(event) => setFulfillment({ ...fulfillment, status: event.target.value })} aria-label="订单状态"><option value="Pendiente">待处理</option><option value="Procesando">处理中</option><option value="Enviado">已发货</option><option value="Entregado">已送达</option><option value="Cancelado">已取消</option></select> : <span className="status-pill">{orderStatusLabel(order.order_status)}</span>}</td>
                   <td>{new Date(order.created_at).toLocaleDateString("zh-CN")}</td>
                   <td>{editingId === order.id ? <><input value={fulfillment.carrier} onChange={(event) => setFulfillment({ ...fulfillment, carrier: event.target.value })} placeholder="物流公司" aria-label="物流公司" /><input value={fulfillment.trackingNumber} onChange={(event) => setFulfillment({ ...fulfillment, trackingNumber: event.target.value })} placeholder="物流单号" aria-label="物流单号" /></> : order.tracking_number ? <>{order.shipping_carrier ?? "物流公司"}<br />{order.tracking_number}</> : "未填写"}</td>
-                  <td>{editingId === order.id ? <><button className="small-button" onClick={() => saveFulfillment(order.id)} disabled={savingFulfillment}>{savingFulfillment ? "正在保存" : "保存物流"}</button><button className="small-button" onClick={() => setEditingId(null)} disabled={savingFulfillment}>取消</button></> : <><button className="small-button" onClick={() => void loadDetail(order.id)}>查看详情</button><button className="small-button" onClick={() => beginFulfillment(order)}>管理物流</button>{order.payment_status === "Pagado" && order.paypal_capture_id ? <button className="small-button" onClick={() => refundOrder(order)}>退款</button> : null}</>}</td>
+                  <td>{editingId === order.id ? <><button className="small-button" onClick={() => saveFulfillment(order.id)} disabled={savingFulfillment}>{savingFulfillment ? "正在保存" : "保存物流"}</button><button className="small-button" onClick={() => setEditingId(null)} disabled={savingFulfillment}>取消</button></> : <><button className="small-button" onClick={() => void loadDetail(order.id)}>查看详情</button><button className="small-button" onClick={() => beginFulfillment(order)}>管理物流</button><button className="small-button" onClick={() => void loadDetail(order.id)}>上传面单</button>{order.payment_status === "Pagado" && order.paypal_capture_id ? <button className="small-button" onClick={() => refundOrder(order)}>退款</button> : null}</>}</td>
                 </tr>
               ))}
               {!loading && visibleOrders.length === 0 ? <tr><td colSpan={8}>{orders.length ? "没有符合筛选条件的订单。" : "暂无订单。"}</td></tr> : null}
@@ -232,7 +233,7 @@ export default function AdminOrdersPage() {
         {fulfillmentError ? <p className="error-box">{fulfillmentError}</p> : null}
         {detailError ? <p className="error-box">{detailError}</p> : null}
         {loadingDetail ? <p className="muted">Cargando detalle del pedido...</p> : null}
-        {detail ? <section className="form-card" style={{ marginTop: 18 }}>
+        {detail ? <section id="order-detail-panel" className="form-card" style={{ marginTop: 18 }}>
           <div className="meta-row"><h2>{detail.order_number}</h2><button className="small-button" onClick={() => setDetail(null)}>Cerrar</button></div>
           <div className="meta-row"><span>Cliente</span><span>{detail.customer_name ?? "Cliente"}</span></div>
           <div className="meta-row"><span>Contacto</span><span>{detail.guest_email ?? "-"}{detail.phone ? ` · ${detail.phone}` : ""}</span></div>
