@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   if (resource === "order") {
     const orderNumber = new URL(request.url).searchParams.get("orderNumber");
     if (!orderNumber) return NextResponse.json({ error: "Pedido no válido." }, { status: 400 });
-    const { data, error } = await database.from("orders").select("id, order_number, total, currency, order_status,     payment_status, shipping_address, tracking_number, shipping_carrier, shipped_at, shipping_label_path, created_at").or(`user_id.eq.${user.id},guest_email.eq.${user.email ?? ""}`).eq("order_number", orderNumber).maybeSingle();
+    const { data, error } = await database.from("orders").select("id, order_number, total, currency, order_status, payment_status, shipping_address, tracking_number, shipping_carrier, shipped_at, shipping_label_path, created_at").or(`user_id.eq.${user.id},guest_email.eq.${user.email ?? ""}`).eq("order_number", orderNumber).maybeSingle();
     if (error) return NextResponse.json({ error: "No se pudo cargar el pedido." }, { status: 500 });
     if (!data) return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
         const { shipping_label_path: labelPath, ...order } = data;
