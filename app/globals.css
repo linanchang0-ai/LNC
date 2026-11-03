@@ -2410,6 +2410,51 @@ th {
   color: var(--white);
 }
 
+.size-quantity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+}
+
+.size-quantity-row.is-selected {
+  border-left-color: var(--text);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.size-quantity-row > strong {
+  font-size: 0.95rem;
+}
+
+.size-quantity-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.size-quantity-stepper button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.size-quantity-stepper button:disabled {
+  opacity: 0.4;
+}
+
+.size-quantity-stepper span {
+  min-width: 36px;
+  text-align: center;
+  font-weight: 600;
+}
+
 .detail-assurances {
   display: grid;
   gap: 10px;
