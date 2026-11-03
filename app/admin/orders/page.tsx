@@ -232,15 +232,15 @@ export default function AdminOrdersPage() {
         {error ? <p className="error-box">{error}</p> : null}
         {fulfillmentError ? <p className="error-box">{fulfillmentError}</p> : null}
         {detailError ? <p className="error-box">{detailError}</p> : null}
-        {loadingDetail ? <p className="muted">Cargando detalle del pedido...</p> : null}
+        {loadingDetail ? <p className="muted">正在加载订单详情...</p> : null}
         {detail ? <section id="order-detail-panel" className="form-card" style={{ marginTop: 18 }}>
-          <div className="meta-row"><h2>{detail.order_number}</h2><button className="small-button" onClick={() => setDetail(null)}>Cerrar</button></div>
-          <div className="meta-row"><span>Cliente</span><span>{detail.customer_name ?? "Cliente"}</span></div>
-          <div className="meta-row"><span>Contacto</span><span>{detail.guest_email ?? "-"}{detail.phone ? ` · ${detail.phone}` : ""}</span></div>
-          <div className="meta-row"><span>Pago</span><span>{detail.payment_status ?? "Pendiente"}</span></div>
-          {detail.shipping_address ? <div className="meta-row"><span>Entrega</span><span>{[detail.shipping_address.street, detail.shipping_address.number, detail.shipping_address.neighborhood, detail.shipping_address.city, detail.shipping_address.state, detail.shipping_address.postalCode].filter(Boolean).join(", ")}</span></div> : null}
-          <h3 style={{ marginTop: 18 }}>Productos</h3>
-          {detail.items.map((item) => <div className="meta-row" key={item.id} style={{ alignItems: "center", gap: 12 }}>{item.image_url ? <a href={item.image_url} target="_blank" rel="noopener noreferrer" style={{ flex: "0 0 auto" }}><img src={item.image_url} alt={item.product_name ?? "Producto"} style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)", display: "block" }} /></a> : null}<span style={{ flex: 1 }}>{item.product_name ?? "Producto"} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
+          <div className="meta-row"><h2>{detail.order_number}</h2><button className="small-button" onClick={() => setDetail(null)}>关闭</button></div>
+          <div className="meta-row"><span>客户</span><span>{detail.customer_name ?? "客户"}</span></div>
+          <div className="meta-row"><span>联系方式</span><span>{detail.guest_email ?? "-"}{detail.phone ? ` · ${detail.phone}` : ""}</span></div>
+          <div className="meta-row"><span>付款</span><span>{paymentStatusLabel(detail.payment_status)}</span></div>
+          {detail.shipping_address ? <div className="meta-row"><span>收货地址</span><span>{[detail.shipping_address.street, detail.shipping_address.number, detail.shipping_address.neighborhood, detail.shipping_address.city, detail.shipping_address.state, detail.shipping_address.postalCode].filter(Boolean).join(", ")}</span></div> : null}
+          <h3 style={{ marginTop: 18 }}>商品</h3>
+          {detail.items.map((item) => <div className="meta-row" key={item.id} style={{ alignItems: "center", gap: 12 }}>{item.image_url ? <a href={item.image_url} target="_blank" rel="noopener noreferrer" style={{ flex: "0 0 auto" }}><img src={item.image_url} alt={item.product_name ?? "商品"} style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)", display: "block" }} /></a> : null}<span style={{ flex: 1 }}>{item.product_name ?? "商品"} × {item.quantity ?? 1}</span><span>{formatPrice(Number(item.price ?? 0) * Number(item.quantity ?? 1))}</span></div>)}
           <h3 style={{ marginTop: 18 }}>物流面单（客户可见）</h3>
           {detail.shipping_label_url ? <a href={detail.shipping_label_url} target="_blank" rel="noopener noreferrer"><img src={detail.shipping_label_url} alt="物流面单" style={{ display: "block", width: "100%", maxWidth: 320, borderRadius: 8, border: "1px solid var(--line)" }} /></a> : <p className="muted">还没有上传面单照片。</p>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
@@ -248,9 +248,9 @@ export default function AdminOrdersPage() {
             {detail.shipping_label_url ? <button type="button" className="small-button" onClick={() => void removeLabel()} disabled={labelBusy}>删除面单</button> : null}
           </div>
           {labelError ? <p className="error-box">{labelError}</p> : null}
-          {detail.returns.length ? <><h3 style={{ marginTop: 18 }}>Devoluciones</h3>{detail.returns.map((item) => <div className="meta-row" key={item.id}><span>{item.reason ?? "Devolución"}: {item.status ?? "Pendiente"}</span><span>{item.restocked_at ? "Inventario repuesto" : ""}</span></div>)}</> : null}
-          {detail.refunds.length ? <><h3 style={{ marginTop: 18 }}>Reembolsos</h3>{detail.refunds.map((item) => <div className="meta-row" key={item.id}><span>{item.refund_reason ?? "Reembolso"}: {item.refund_status ?? "Pendiente"}</span><span>{formatPrice(Number(item.refund_amount ?? 0))}</span></div>)}</> : null}
-          {detail.payment_status === "Pagado" && detail.paypal_capture_id ? <><h3 style={{ marginTop: 18 }}>Solicitar reembolso</h3><div className="form-grid"><label>Importe<input type="number" min="0.01" max={detail.total} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} placeholder={`Máximo ${formatPrice(detail.total)}`} /></label><label>Motivo<input value={refundReason} onChange={(event) => setRefundReason(event.target.value)} placeholder="Motivo del reembolso" /></label></div><button className="small-button" onClick={() => void refundFromDetail()} disabled={refunding}>{refunding ? "Procesando" : "Solicitar reembolso"}</button>{refundError ? <p className="error-box">{refundError}</p> : null}</> : null}
+          {detail.returns.length ? <><h3 style={{ marginTop: 18 }}>退货</h3>{detail.returns.map((item) => <div className="meta-row" key={item.id}><span>{item.reason ?? "退货"}: {item.status ?? "待处理"}</span><span>{item.restocked_at ? "已补回库存" : ""}</span></div>)}</> : null}
+          {detail.refunds.length ? <><h3 style={{ marginTop: 18 }}>退款记录</h3>{detail.refunds.map((item) => <div className="meta-row" key={item.id}><span>{item.refund_reason ?? "退款"}: {item.refund_status ?? "待处理"}</span><span>{formatPrice(Number(item.refund_amount ?? 0))}</span></div>)}</> : null}
+          {detail.payment_status === "Pagado" && detail.paypal_capture_id ? <><h3 style={{ marginTop: 18 }}>申请退款</h3><div className="form-grid"><label>退款金额<input type="number" min="0.01" max={detail.total} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} placeholder={`最多 ${formatPrice(detail.total)}`} /></label><label>退款原因<input value={refundReason} onChange={(event) => setRefundReason(event.target.value)} placeholder="退款原因" /></label></div><button className="small-button" onClick={() => void refundFromDetail()} disabled={refunding}>{refunding ? "处理中" : "申请退款"}</button>{refundError ? <p className="error-box">{refundError}</p> : null}</> : null}
         </section> : null}
       </div>
     </div>
