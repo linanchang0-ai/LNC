@@ -62,7 +62,6 @@ export default function CartPage() {
               </div>
             ) : null}
             {items.length === 0 ? (
-            {items.length === 0 ? (
               <div className="empty-state">
                 <div className="muted">{t("Tu carrito está vacío. Explora nuestra colección seleccionada.")}</div>
                 <Link href="/shop" className="primary-button" style={{ marginTop: 18 }}>
