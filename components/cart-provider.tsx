@@ -57,6 +57,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const parsed = JSON.parse(raw) as CartItem[];
       if (!Array.isArray(parsed)) return;
+      // Muestra de inmediato el carrito guardado; después se valida contra el catálogo.
+      startTransition(() => setItems(parsed));
       void fetch("/api/products")
         .then(async (response) => response.ok ? await response.json() as { items?: Array<{ databaseId?: string; id: string | number }> } : null)
         .then((catalog) => {

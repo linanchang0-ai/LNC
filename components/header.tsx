@@ -9,6 +9,7 @@ import { supportedLocales } from "@/lib/i18n";
 import { usePathname } from "next/navigation";
 import { siteConfig } from "@/lib/site-config";
 import { translateProductColor, translateProductField, translateText } from "@/lib/i18n";
+import { normalizeSearchText } from "@/lib/text";
 
 const desktopNav = [
   { href: "/shop", label: "Comprar" },
@@ -68,7 +69,7 @@ export function Header() {
   const [coupon, setCoupon] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-  const searchResults = products.filter((product) => `${product.name} ${translateProductField(locale, product.translations, "name", product.name)} ${product.category} ${t(product.category)} ${product.shortDescription} ${translateProductField(locale, product.translations, "shortDescription", product.shortDescription)}`.toLowerCase().includes(searchTerm.toLowerCase())).slice(0, 6);
+  const searchResults = products.filter((product) => normalizeSearchText(`${product.name} ${translateProductField(locale, product.translations, "name", product.name)} ${product.category} ${t(product.category)} ${product.shortDescription} ${translateProductField(locale, product.translations, "shortDescription", product.shortDescription)}`).includes(normalizeSearchText(searchTerm))).slice(0, 6);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 12);

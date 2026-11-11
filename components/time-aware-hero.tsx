@@ -78,9 +78,9 @@ export function TimeAwareHero() {
       <div className="hero-overlay" />
       <div className="container-shell hero-content">
         <div className="hero-copy">
-          <span className="eyebrow subdued">{t("LNC SPORTS · DISEÑO COTIDIANO")}</span>
-          <h1>{t("Diseño para vivir mejor.")}</h1>
-          <p>{t("Piezas esenciales para tu día a día.")}</p>
+          <span className="eyebrow subdued">{t("LNC SPORTS · CAMISETAS DE FÚTBOL")}</span>
+          <h1>{t("Tu camiseta de la Selección, lista para el partido.")}</h1>
+          <p>{t("Camisetas de fútbol con tallas S–4XL, envío a todo México y pago seguro.")}</p>
           <div className="hero-actions">
             <Link href="/shop" className="primary-button">{t("Explorar colección")}</Link>
           </div>

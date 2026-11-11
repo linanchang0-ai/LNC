@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 const faqItems = [
   { q: "¿Hacen envíos a todo México?", a: "Sí. Enviamos a todo México con seguimiento una vez que tu pedido sale de preparación." },
   { q: "¿Cuál es la política de devoluciones?", a: "Cada solicitud se revisa conforme a las condiciones del producto, el motivo de la compra y la legislación aplicable." },
-  { q: "¿Los productos son para uso diario?", a: "Sí. Seleccionamos materiales resistentes y acabados pensados para acompañarte todos los días." },
+  { q: "¿Qué tallas manejan?", a: "Disponibles en tallas S, M, L, XL, 2XL, 3XL y 4XL. Si tienes dudas con la talla, escríbenos por WhatsApp antes de comprar." },
   { q: "¿Cuánto tarda la entrega?", a: "Los tiempos de entrega son estimados y pueden variar según la preparación, el destino, la paquetería y las aduanas." },
 ];
 
@@ -60,11 +60,24 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="product-grid">
-            {featured.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {featured.length > 0 ? (
+            <div className="product-grid">
+              {featured.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <p className="muted">
+                {products.length === 0
+                  ? t("Estamos preparando nuestro catálogo. Si buscas algo en particular, estamos aquí para ayudarte.")
+                  : t("Estamos preparando la selección destacada. Mientras tanto, puedes explorar toda la tienda.")}
+              </p>
+              <Link href={products.length === 0 ? "/contact" : "/shop"} className="ghost-button">
+                {products.length === 0 ? t("Contactar al equipo") : t("Explorar la tienda")}
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 # LNC SPORTS
 
-E-commerce premium para México con enfoque en lifestyle, diseño y alto ticket.
+Tienda en línea de camisetas de fútbol para el mercado mexicano, con pago seguro y envío con seguimiento.
 
 ## Stack
 
@@ -26,8 +26,9 @@ npm run start
 Crea un archivo `.env.local` con las siguientes variables:
 
 ```bash
-NEXT_PUBLIC_SITE_URL=https://tu-dominio.com
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SITE_URL=https://linanchang.com
+NEXT_PUBLIC_WHATSAPP_NUMBER=8615219204028
+NEXT_PUBLIC_SUPABASE_URL=https://hffptjdlcrpewcdhvcub.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role
 PAYPAL_CLIENT_ID=tu-client-id
@@ -35,8 +36,10 @@ NEXT_PUBLIC_PAYPAL_CLIENT_ID=tu-client-id
 PAYPAL_CLIENT_SECRET=tu-client-secret
 PAYPAL_ENVIRONMENT=sandbox
 PAYPAL_WEBHOOK_ID=tu-webhook-id
-EMAIL_FROM=hola@tu-dominio.com
+EMAIL_FROM=orders@linanchang.com
 ```
+
+El botón flotante de contacto abre directamente el WhatsApp `+86 152 1920 4028`. Puedes cambiar el destino configurando `NEXT_PUBLIC_WHATSAPP_NUMBER` con el código de país y solo dígitos; el número se incluye en el enlace público de contacto.
 
 Para enviar confirmaciones de pedido y avisos de envío, agrega también `RESEND_API_KEY` en Vercel y verifica el dominio de `EMAIL_FROM` en Resend. Sin esa clave los pagos y envíos continúan funcionando, pero no se enviarán correos.
 
@@ -50,7 +53,7 @@ El procedimiento para identificar y reparar pedidos históricos incompletos est�
 
 El acceso al panel se concede por usuario de Supabase, siguiendo [docs/admin-access.md](docs/admin-access.md).
 
-Antes de activar pagos reales, configura en PayPal el webhook `PAYMENT.CAPTURE.COMPLETED` y los eventos `PAYMENT.REFUND.*` apuntando a `https://tu-dominio.com/api/paypal/webhook`. Ejecuta todas las migraciones de `supabase/migrations` y verifica que `GET /api/health` responda `200` antes de publicar.
+Antes de activar pagos reales, configura en PayPal el webhook `PAYMENT.CAPTURE.COMPLETED` y los eventos `PAYMENT.REFUND.*` apuntando a `https://linanchang.com/api/paypal/webhook`. Ejecuta todas las migraciones de `supabase/migrations` y verifica que `GET /api/health` responda `200` antes de publicar.
 
 Para administrar el carrusel de inicio, ejecuta también la migración `20261022120000_create_homepage_slides.sql`. Después, las cuentas con rol `admin` u `operations` pueden subir y ordenar imágenes desde `/admin/slides`.
 

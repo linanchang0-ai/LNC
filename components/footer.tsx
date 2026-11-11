@@ -14,6 +14,11 @@ export function Footer() {
   const t = (text: string) => translateText(locale, text);
   const whatsappHref = siteConfig.whatsappNumber ? `https://wa.me/${siteConfig.whatsappNumber}` : "/contact";
   const whatsappProps = siteConfig.whatsappNumber ? { target: "_blank", rel: "noopener noreferrer" } : {};
+  const socialLinks = [
+    { label: "Instagram", href: siteConfig.social.instagram },
+    { label: "Facebook", href: siteConfig.social.facebook },
+    { label: "TikTok", href: siteConfig.social.tiktok },
+  ].filter((item) => item.href);
   return (
     <footer className="footer">
       <div className="container-shell footer-grid">
@@ -23,7 +28,7 @@ export function Footer() {
             <span>LNC SPORTS</span>
           </div>
           <p className="muted" style={{ maxWidth: 280 }}>
-            {t("Descubre mejores productos para disfrutar más cada día.")}
+            {t("Camisetas de fútbol para hinchas, con envío a todo México y pago seguro.")}
           </p>
         </div>
 
@@ -68,7 +73,7 @@ export function Footer() {
           </div>
         </div>
       </div>
-      <div className="container-shell footer-bottom"><span>{t("© 2026 LNC SPORTS. Todos los derechos reservados.")}</span><span>Instagram · Facebook · TikTok</span></div>
+      <div className="container-shell footer-bottom"><span>{t("© 2026 LNC SPORTS. Todos los derechos reservados.")}</span>{socialLinks.length > 0 ? <span className="footer-social">{socialLinks.map((item, index) => <span key={item.label}>{index > 0 ? " · " : null}<a href={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a></span>)}</span> : null}</div>
       <div className="container-shell footer-newsletter"><strong>{t("Únete a la comunidad LNC SPORTS.")}</strong><NewsletterSignup compact /></div>
     </footer>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { categories as fallbackCategories, type Category, type Product } from "@/data/products";
 import { ProductCard } from "@/components/product-card";
@@ -9,15 +10,18 @@ export default function ShopPage() {
   const { t } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
+  const [productsLoadFailed, setProductsLoadFailed] = useState(false);
   const [categories, setCategories] = useState<Category[]>(fallbackCategories);
   const [category, setCategory] = useState("all");
   const [price, setPrice] = useState("all");
   const [sort, setSort] = useState("featured");
   useEffect(() => {
     fetch("/api/products").then(async (response) => {
+      if (!response.ok) throw new Error("No se pudieron cargar los productos.");
       const data = await response.json() as { items?: Product[] };
-      if (response.ok && data.items) setProducts(data.items);
-    }).catch(() => undefined).finally(() => setProductsLoaded(true));
+      if (!Array.isArray(data.items)) throw new Error("La respuesta de productos no es válida.");
+      setProducts(data.items);
+    }).catch(() => setProductsLoadFailed(true)).finally(() => setProductsLoaded(true));
     fetch("/api/categories").then(async (response) => {
       const data = await response.json() as { items?: Category[] };
       if (response.ok && data.items) setCategories(data.items);
@@ -42,7 +46,7 @@ export default function ShopPage() {
     <div className="container-shell" style={{ padding: "24px 0 40px" }}>
       <div className="page-hero">
         <h1>{t("Tienda")}</h1>
-        <p>{t("Una colección seleccionada de objetos premium para tus rituales y espacios cotidianos.")}</p>
+        <p>{t("Camisetas de fútbol para hinchas: ediciones local y visitante, varias tallas y colores, listas para tu próximo partido.")}</p>
       </div>
 
       <div className="shop-toolbar">
@@ -56,7 +60,17 @@ export default function ShopPage() {
       <div className="product-grid">
         {filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)}
       </div>
-      {productsLoaded && filteredProducts.length === 0 ? <div className="empty-state"><p className="muted">{t("No hay productos disponibles.")}</p></div> : null}
+      {productsLoaded && productsLoadFailed ? <p className="error-box" role="alert">{t("No pudimos cargar los productos. Inténtalo de nuevo más tarde.")}</p> : null}
+      {productsLoaded && !productsLoadFailed && filteredProducts.length === 0 ? (
+        <div className="empty-state">
+          <p className="muted">
+            {products.length === 0
+              ? t("Estamos preparando nuestro catálogo. Si buscas algo en particular, estamos aquí para ayudarte.")
+              : t("No encontramos productos con estos filtros. Prueba otra selección.")}
+          </p>
+          {products.length === 0 ? <Link href="/contact" className="ghost-button">{t("Contactar al equipo")}</Link> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -237,10 +237,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <h2 className="section-title">{t("Características")}</h2>
         </div>
         <div className="story-grid">
-          <div className="story-card"><h3>{t("Diseño")}</h3><p>{t("Formas sobrias y presencia visual que elevan el ambiente.")}</p></div>
-          <div className="story-card"><h3>{t("Calidad")}</h3><p>{t("Materiales seleccionados y acabados pensados para durar.")}</p></div>
-          <div className="story-card"><h3>{t("Materiales")}</h3><p>{t("Texturas premium, durabilidad y detalles funcionales.")}</p></div>
-          <div className="story-card"><h3>{t("Incluye")}</h3><p>{t("La pieza preparada para integrarse a tu espacio desde el primer día.")}</p></div>
+          <div className="story-card"><h3>{t("Diseño")}</h3><p>{t("Diseño inspirado en la Selección Mexicana, con detalles de la cultura azteca.")}</p></div>
+          <div className="story-card"><h3>{t("Calidad")}</h3><p>{t("Materiales ligeros y transpirables que evacúan el sudor.")}</p></div>
+          <div className="story-card"><h3>{t("Comodidad")}</h3><p>{t("Tela suave y de secado rápido, cómoda para partidos y entrenamientos.")}</p></div>
+          <div className="story-card"><h3>{t("Tallas")}</h3><p>{t("Disponible de S a 4XL, para que encuentres tu talla ideal.")}</p></div>
         </div>
       </section>
 

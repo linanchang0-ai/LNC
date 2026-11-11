@@ -1,4 +1,5 @@
 import type { ProductTranslations, ProductTranslationTextField } from "@/lib/product-translations";
+import { normalizeSearchText } from "@/lib/text";
 
 export type Locale = "en" | "zh" | "es";
 
@@ -14,6 +15,13 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Camiseta de fútbol de local de la Selección Nacional de México. Cuenta con un diseño exclusivo inspirado en la cultura azteca y el calendario maya, con el color verde icónico del equipo.\nFabricada en tela ligera y transpirable, que evacúa el sudor para mantenerte fresco durante el partido o en el día a día. Cuello y puños con acabado rojo y blanco, escudo de México y logo adidas estampados.\nPerfecta para usar en los partidos, entrenamientos o como prenda casual para demostrar tu pasión por el Tri. Disponible en varias tallas.": { en: "Mexico national team home football jersey featuring an exclusive design inspired by Aztec culture and the Mayan calendar, in the team's iconic green.\nMade from lightweight, breathable, moisture-wicking fabric to help keep you cool during matches or everyday wear. Finished with red-and-white collar and cuffs, and printed with the Mexico crest and adidas logo.\nPerfect for matches, training, or casual wear to show your support for El Tri. Available in multiple sizes.", zh: "墨西哥国家队主场足球球衣，采用受阿兹特克文化和玛雅历法启发的专属设计，呈现球队标志性的绿色。\n采用轻盈透气、帮助排汗的面料，让你在比赛或日常穿着时保持清爽。红白配色领口和袖口，并印有墨西哥队徽与 adidas 标志。\n适合比赛、训练或日常穿着，展现你对墨西哥队的支持。多种尺码可选。" },
   "fibra de poliéster especial": { en: "Special polyester fiber", zh: "特制聚酯纤维" },
   "verde": { en: "Green", zh: "绿色" },
+  "negro": { en: "Black", zh: "黑色" },
+  "Negro": { en: "Black", zh: "黑色" },
+  "blanco": { en: "White", zh: "白色" },
+  "Blanco": { en: "White", zh: "白色" },
+  "gris": { en: "Gray", zh: "灰色" },
+  "azul": { en: "Blue", zh: "蓝色" },
+  "rojo": { en: "Red", zh: "红色" },
   "En stock": { en: "In stock", zh: "有货" },
   "Pocas unidades": { en: "Only a few left", zh: "库存不多" },
   "detalle": { en: "detail", zh: "细节" },
@@ -489,6 +497,30 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "El enlace expiró o no es válido. Solicita uno nuevo.": { en: "The link has expired or is invalid. Request a new one.", zh: "链接已过期或无效，请重新申请。" },
   "No se pudo verificar tu sesión. Solicita un nuevo enlace.": { en: "Your session couldn't be verified. Request a new link.", zh: "无法验证您的会话，请重新申请链接。" },
   "Tu carrito está vacío. Agrega un producto antes de pagar.": { en: "Your cart is empty. Add a product before checkout.", zh: "购物车为空，请先添加商品再结账。" },
+  "LNC SPORTS · CAMISETAS DE FÚTBOL": { en: "LNC SPORTS · SOCCER JERSEYS", zh: "LNC SPORTS · 足球球衣" },
+  "Tu camiseta de la Selección, lista para el partido.": { en: "Your national team jersey, ready for kick-off.", zh: "你的国家队球衣，准备好上场。" },
+  "Camisetas de fútbol con tallas S–4XL, envío a todo México y pago seguro.": { en: "Soccer jerseys in sizes S–4XL, shipped across Mexico with secure payment.", zh: "S–4XL 全尺码足球球衣，墨西哥全境配送，安全支付。" },
+  "Camisetas de fútbol para hinchas: ediciones local y visitante, varias tallas y colores, listas para tu próximo partido.": { en: "Soccer jerseys for fans: home and away editions, multiple sizes and colors, ready for your next match.", zh: "球迷足球球衣：主场与客场款，多尺码多配色，为你的下一场比赛准备。" },
+  "¿Qué tallas manejan?": { en: "What sizes do you offer?", zh: "你们有哪些尺码？" },
+  "Disponibles en tallas S, M, L, XL, 2XL, 3XL y 4XL. Si tienes dudas con la talla, escríbenos por WhatsApp antes de comprar.": { en: "Available in S, M, L, XL, 2XL, 3XL, and 4XL. If you are unsure about your size, message us on WhatsApp before ordering.", zh: "提供 S、M、L、XL、2XL、3XL、4XL 尺码。尺码不确定请在下单前通过 WhatsApp 咨询。" },
+  "Camisetas para vivir el fútbol con pasión.": { en: "Jerseys to live football with passion.", zh: "带着热情为足球而穿的球衣。" },
+  "Somos una tienda de camisetas de fútbol para hinchas mexicanos, con tallas para todos y envío con seguimiento.": { en: "We are a soccer jersey store for Mexican fans, with sizes for everyone and tracked shipping.", zh: "我们是面向墨西哥球迷的足球球衣店，尺码齐全，物流可追踪。" },
+  "Camisetas de fútbol de la Selección Mexicana": { en: "Mexico national team soccer jerseys", zh: "墨西哥国家队足球球衣" },
+  "Nuestra prioridad: calidad y confianza.": { en: "Our priority: quality and trust.", zh: "我们的首要原则：品质与信任。" },
+  "LNC SPORTS es una tienda de camisetas de fútbol dirigida a hinchas mexicanos. Seleccionamos diseños con identidad, telas ligeras y transpirables, y un proceso de compra claro, para que llegues al partido con la camiseta correcta.": { en: "LNC SPORTS is a soccer jersey store for Mexican fans. We pick designs with character, lightweight breathable fabrics, and a clear checkout process, so you reach the match in the right jersey.", zh: "LNC SPORTS 是一家面向墨西哥球迷的足球球衣店。我们挑选有辨识度的设计、轻盈透气的面料和清晰顺畅的购买流程，让你穿着合适的球衣来到赛场。" },
+  "Diseños inspirados en la Selección y en los equipos que apoyas.": { en: "Designs inspired by the national team and the clubs you support.", zh: "灵感来自国家队和你所支持的球队。" },
+  "Tela ligera y transpirable, pensada para el partido y para el día a día.": { en: "Lightweight, breathable fabric made for match day and everyday wear.", zh: "轻盈透气的面料，适合比赛与日常穿着。" },
+  "Hinchas": { en: "Fans", zh: "球迷" },
+  "Para ir al estadio, ver el partido con amigos o presumir tu pasión por el Tri.": { en: "For the stadium, watching the match with friends, or showing your passion for El Tri.", zh: "无论是去球场、和朋友看球，还是展示你对墨西哥队的支持。" },
+  "Atención": { en: "Support", zh: "服务" },
+  "Te acompañamos por WhatsApp y resolvemos tus dudas de talla, color y envío.": { en: "We support you on WhatsApp and answer questions about size, color, and shipping.", zh: "我们通过 WhatsApp 提供协助，解答尺码、配色与配送问题。" },
+  "Diseño inspirado en la Selección Mexicana, con detalles de la cultura azteca.": { en: "Design inspired by the Mexico national team, with Aztec cultural details.", zh: "灵感来自墨西哥国家队，融入阿兹特克文化细节。" },
+  "Materiales ligeros y transpirables que evacúan el sudor.": { en: "Lightweight, breathable materials that wick away sweat.", zh: "轻盈透气面料，帮助排汗。" },
+  "Comodidad": { en: "Comfort", zh: "舒适" },
+  "Tela suave y de secado rápido, cómoda para partidos y entrenamientos.": { en: "Soft, quick-drying fabric, comfortable for matches and training.", zh: "柔软速干面料，比赛和训练都舒适。" },
+  "Tallas": { en: "Sizes", zh: "尺码" },
+  "Disponible de S a 4XL, para que encuentres tu talla ideal.": { en: "Available from S to 4XL so you can find your ideal fit.", zh: "S 到 4XL 全尺码，方便找到合身版型。" },
+  "Camisetas de fútbol para hinchas, con envío a todo México y pago seguro.": { en: "Soccer jerseys for fans, shipped across Mexico with secure payment.", zh: "面向球迷的足球球衣，墨西哥全境配送，安全支付。" },
 };
 
 export function translateText(locale: Locale, text: string): string {
@@ -509,10 +541,17 @@ export function translateProductMaterials(locale: Locale, translations: ProductT
   });
 }
 
-export function translateProductColor(locale: Locale, translations: ProductTranslations | null | undefined, color: string): string {
+export function translateProductColor(locale: Locale, productTranslations: ProductTranslations | null | undefined, color: string): string {
   if (locale === "es") return color;
-  const translated = translations?.[locale]?.colors;
-  return translated && Object.prototype.hasOwnProperty.call(translated, color) ? translated[color].trim() || translateText(locale, color) : translateText(locale, color);
+  const productColors = productTranslations?.[locale]?.colors;
+  if (productColors) {
+    const direct = productColors[color];
+    if (direct?.trim()) return direct.trim();
+    const matchKey = Object.keys(productColors).find((key) => normalizeSearchText(key) === normalizeSearchText(color));
+    const matched = matchKey ? productColors[matchKey] : undefined;
+    if (matched?.trim()) return matched.trim();
+  }
+  return translateText(locale, color);
 }
 
 export function normalizeLocale(value: string | undefined): Locale {
