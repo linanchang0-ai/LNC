@@ -46,7 +46,8 @@ export default function AuthCallbackPage() {
         return;
       }
       const adminSession = await fetch("/api/admin/session").then((response) => response.ok ? response.json() as Promise<{ authenticated?: boolean }> : null).catch(() => null);
-      const next = requestedNext ?? (type === "recovery"
+      const allowedNext = ["/admin/set-password", "/account/set-password", "/account", "/admin"];
+      const next = requestedNext && allowedNext.includes(requestedNext) ? requestedNext : (type === "recovery"
         ? adminSession?.authenticated ? "/admin/set-password" : "/account/set-password"
         : adminSession?.authenticated ? "/admin" : "/account");
       window.location.replace(next);
