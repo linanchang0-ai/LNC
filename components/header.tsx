@@ -247,7 +247,10 @@ export function Header() {
         <div className="cart-drawer-header">
           <div><span className="eyebrow subdued">{t("Tu selección")}</span><h2>{t("Carrito")} ({itemCount})</h2></div>
           <div className="cart-drawer-header-actions">
-            {items.length > 0 ? <button type="button" className="cart-drawer-clear" onClick={handleClearCart}>{t("Vaciar carrito")}</button> : null}
+            {items.length > 0 ? <button type="button" className="cart-drawer-clear" onClick={handleClearCart} aria-label={t("Vaciar carrito")}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+              <span>{t("Vaciar carrito")}</span>
+            </button> : null}
             <button type="button" onClick={() => setCartOpen(false)} aria-label={t("Cerrar bolsa")}>×</button>
           </div>
         </div>

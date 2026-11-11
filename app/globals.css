@@ -809,13 +809,17 @@ th {
 .cart-drawer-header h2 { margin-top: 2px; font-size: var(--h2-size); }
 .cart-drawer-header-actions { display: flex; align-items: center; gap: 6px; }
 .cart-drawer-header .cart-drawer-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   width: auto;
   flex: 0 0 auto;
   height: 44px;
   font-size: 0.78rem;
-  color: var(--muted-text);
+  color: var(--accent);
 }
-.cart-drawer-header .cart-drawer-clear:hover { color: var(--accent); }
+.cart-drawer-header .cart-drawer-clear svg { width: 16px; height: 16px; }
+.cart-drawer-header .cart-drawer-clear:hover { color: var(--text); }
 .cart-drawer-empty { display: grid; gap: 18px; padding: 32px 0; }
 .cart-drawer-items { display: grid; gap: 16px; padding: 22px 0; }
 .cart-drawer-item { display: grid; grid-template-columns: 76px 1fr; gap: 12px; }
