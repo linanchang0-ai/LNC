@@ -319,7 +319,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       </section>
 
       <div style={{ marginTop: 24 }}>
-        <button type="button" className="ghost-button" onClick={handleBackToProducts}>{t("Volver a productos")}</button>
+        <button type="button" className="primary-button" onClick={handleBackToProducts}>{t("Volver a productos")}</button>
       </div>
       <ContactButton />
       {zoomOpen ? <div className="image-lightbox" role="dialog" aria-modal="true" style={{ touchAction: "pan-y" }} {...swipeHandlers} aria-label={t("Vista previa de la imagen del producto")} onClick={() => setZoomOpen(false)}><button type="button" aria-label={t("Cerrar vista previa de la imagen")} onClick={() => setZoomOpen(false)}>×</button><img src={activeImage} alt={productName} /></div> : null}
