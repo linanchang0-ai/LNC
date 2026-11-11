@@ -1,7 +1,7 @@
 const whatsappNumber = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim() || "8615219204028").replace(/[\s()+-]/g, "");
 
 const socialLinks = {
-  instagram: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM?.trim() || "",
+  instagram: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM?.trim() || "https://www.instagram.com/nanchang.li/",
   facebook: process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK?.trim() || "https://www.facebook.com/profile.php?id=61579683620534",
   tiktok: process.env.NEXT_PUBLIC_SOCIAL_TIKTOK?.trim() || "",
 };
