@@ -32,7 +32,7 @@ export default async function HomePage() {
             <div>
               <h2 className="section-title">{t("Colecciones")}</h2>
             </div>
-            <Link href="/shop" className="ghost-button">
+            <Link href="/shop" className="primary-button">
               {t("Ver todo")}
             </Link>
           </div>
@@ -55,7 +55,7 @@ export default async function HomePage() {
             <div>
               <h2 className="section-title">{t("Productos destacados")}</h2>
             </div>
-            <Link href="/shop" className="ghost-button">
+            <Link href="/shop" className="primary-button">
               {t("Ver todo")}
             </Link>
           </div>
