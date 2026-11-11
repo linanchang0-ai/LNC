@@ -59,7 +59,7 @@ export function Header() {
   const isAdmin = pathname?.startsWith("/admin") ?? false;
   const locale = isAdmin ? "zh" : selectedLocale;
   const t = (text: string) => translateText(locale, text);
-  const { items, itemCount, subtotal, shipping, discount, couponCode, total, applyCoupon, clearCoupon, updateQuantity, removeFromCart } = useCart();
+  const { items, itemCount, subtotal, shipping, discount, couponCode, total, applyCoupon, clearCoupon, updateQuantity, removeFromCart, clearCart } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -97,6 +97,10 @@ export function Header() {
     }
     applyCoupon(data.code, data.discount);
     setCouponMessage(t("Cupón aplicado."));
+  };
+
+  const handleClearCart = () => {
+    if (window.confirm(t("¿Vaciar todo el carrito?"))) clearCart();
   };
 
   const changeLocale = (nextLocale: string) => {
@@ -242,7 +246,10 @@ export function Header() {
         {addedProduct ? <div className="added-confirmation">{t("Añadido a tu carrito")} <span>✓</span><small>{translateProductField(locale, addedProduct.translations, "name", addedProduct.name)}</small></div> : null}
         <div className="cart-drawer-header">
           <div><span className="eyebrow subdued">{t("Tu selección")}</span><h2>{t("Carrito")} ({itemCount})</h2></div>
-          <button type="button" onClick={() => setCartOpen(false)} aria-label={t("Cerrar bolsa")}>×</button>
+          <div className="cart-drawer-header-actions">
+            {items.length > 0 ? <button type="button" className="cart-drawer-clear" onClick={handleClearCart}>{t("Vaciar carrito")}</button> : null}
+            <button type="button" onClick={() => setCartOpen(false)} aria-label={t("Cerrar bolsa")}>×</button>
+          </div>
         </div>
         {items.length === 0 ? (
           <div className="cart-drawer-empty"><p>{t("Tu carrito está vacío.")}</p><Link href="/shop" className="primary-button" onClick={() => setCartOpen(false)}>{t("Explorar colección")}</Link></div>
