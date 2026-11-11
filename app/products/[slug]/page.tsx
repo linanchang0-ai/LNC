@@ -121,15 +121,28 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   const badgeCountForColor = (color: string) => (cartQtyByColor[color] ?? 0) + pendingCountForColor(color);
 
+  const pendingLines = product.colors.flatMap((color) => {
+    const price = priceForColor(product, color);
+    const image = imageForColor(product, color);
+    if (hasSizes) {
+      return (product.sizes ?? []).map((size) => ({ color, size, count: sizeQuantitiesByColor[color]?.[size] ?? 0, price, image }));
+    }
+    return [{ color, size: undefined as string | undefined, count: quantityByColor[color] ?? 0, price, image }];
+  }).filter((line) => line.count > 0);
+
+  const grandTotalQuantity = pendingLines.reduce((sum, line) => sum + line.count, 0);
+  const grandSubtotal = pendingLines.reduce((sum, line) => sum + line.count * line.price, 0);
+
   const addSelectionToCart = () => {
-    if (totalQuantity < 1) return false;
-    const base = { id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor };
-    const lines = hasSizes ? (product.sizes ?? []).map((size) => ({ size, count: currentSizeQuantities[size] ?? 0 })) : [{ size: undefined, count: currentQuantity }];
-    for (const line of lines) for (let index = 0; index < line.count; index += 1) addToCart({ ...base, size: line.size });
+    if (grandTotalQuantity < 1) return false;
+    for (const line of pendingLines) {
+      const base = { id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: line.price, image: line.image, color: line.color };
+      for (let index = 0; index < line.count; index += 1) addToCart({ ...base, size: line.size });
+    }
     // Meta Pixel: AddToCart
-    metaEvents.addToCart({ content_name: product.name, content_ids: [product.databaseId ?? product.id], content_type: "product", value: selectedPrice * totalQuantity, currency: "MXN", quantity: totalQuantity });
-    setSizeQuantitiesByColor((current) => { const next = { ...current }; delete next[selectedColor]; return next; });
-    setQuantityByColor((current) => { const next = { ...current }; delete next[selectedColor]; return next; });
+    metaEvents.addToCart({ content_name: product.name, content_ids: [product.databaseId ?? product.id], content_type: "product", value: grandSubtotal, currency: "MXN", quantity: grandTotalQuantity });
+    setSizeQuantitiesByColor({});
+    setQuantityByColor({});
     setAddedNotice(true);
     window.setTimeout(() => setAddedNotice(false), 2000);
     return true;
@@ -224,14 +237,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <div className="detail-actions detail-actions--buy">
             <button
               className="primary-button"
-              disabled={isOutOfStock || totalQuantity < 1}
+              disabled={isOutOfStock || grandTotalQuantity < 1}
               onClick={() => { addSelectionToCart(); }}
             >
               {isOutOfStock ? t("Agotado") : addedNotice ? `✓ ${t("Añadido")}` : t("Añadir al carrito")}
             </button>
             <button
               className="secondary-button"
-              disabled={isOutOfStock || totalQuantity < 1}
+              disabled={isOutOfStock || grandTotalQuantity < 1}
               onClick={() => { if (addSelectionToCart()) router.push("/checkout"); }}
             >
               {isOutOfStock ? t("Agotado") : t("Comprar ahora")}
@@ -252,23 +265,23 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
       <div className="pdp-sticky-bar">
         <div className="pdp-sticky-summary">
-          <span className="pdp-sticky-badge" aria-hidden="true">{totalQuantity}</span>
+          <span className="pdp-sticky-badge" aria-hidden="true">{grandTotalQuantity}</span>
           <div className="pdp-sticky-price-box">
-            <strong className="pdp-sticky-price">{formatPrice(totalQuantity > 0 ? selectedPrice * totalQuantity : 0)}</strong>
-            <span className="pdp-sticky-count">{t("Seleccionado")}: {totalQuantity}</span>
+            <strong className="pdp-sticky-price">{formatPrice(grandTotalQuantity > 0 ? grandSubtotal : 0)}</strong>
+            <span className="pdp-sticky-count">{t("Seleccionado")}: {grandTotalQuantity}</span>
           </div>
         </div>
         <div className="pdp-sticky-actions">
           <button
             className="secondary-button"
-            disabled={isOutOfStock || totalQuantity < 1}
+            disabled={isOutOfStock || grandTotalQuantity < 1}
             onClick={() => { addSelectionToCart(); }}
           >
             {isOutOfStock ? t("Agotado") : addedNotice ? `✓ ${t("Añadido")}` : t("Añadir al carrito")}
           </button>
           <button
             className="primary-button"
-            disabled={isOutOfStock || totalQuantity < 1}
+            disabled={isOutOfStock || grandTotalQuantity < 1}
             onClick={() => { if (addSelectionToCart()) router.push("/checkout"); }}
           >
             {isOutOfStock ? t("Agotado") : t("Comprar ahora")}
