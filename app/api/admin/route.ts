@@ -137,7 +137,7 @@ export async function GET(request: Request) {
 }
 
 function productSlug(name: string) {
-  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function stockLabel(quantity: number) {
@@ -197,8 +197,8 @@ export async function POST(request: Request) {
   const productTranslations = translations === undefined ? {} : normalizeProductTranslations(translations);
   if (!productTranslations) return NextResponse.json({ error: "Las traducciones del producto no son válidas." }, { status: 400 });
   const sizeOptions = [...new Set((sizes ?? []).map((size) => size.trim()))];
-  const slug = productSlug(cleanName);
-  if (!slug) return NextResponse.json({ error: "El nombre no permite generar un enlace válido." }, { status: 400 });
+  let slug = productSlug(cleanName);
+  if (!slug) slug = `producto-${Date.now().toString(36)}`;
   const content = {
     short_description: shortDescription?.trim() || "",
     description: description?.trim() || "",

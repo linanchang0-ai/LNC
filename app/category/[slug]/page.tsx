@@ -3,11 +3,12 @@ import { CategoryProductList } from "@/components/category-product-list";
 import { getCatalogCategories, getCatalogPopularProductIds, getCatalogProducts } from "@/lib/catalog";
 import { getRequestLocale } from "@/lib/server-locale";
 import { translateText } from "@/lib/i18n";
+import { normalizeRouteSlug } from "@/lib/text";
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const [categories, locale] = await Promise.all([getCatalogCategories(), getRequestLocale()]);
-  const category = categories.find((item) => item.slug === resolvedParams.slug);
+  const category = categories.find((item) => normalizeRouteSlug(item.slug) === normalizeRouteSlug(resolvedParams.slug));
   if (!category) notFound();
   const translate = (text: string) => translateText(locale, text);
 

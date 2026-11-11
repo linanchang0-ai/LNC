@@ -12,6 +12,7 @@ import { metaEvents } from "@/components/MetaPixel";
 import { useI18n } from "@/components/locale-provider";
 import { siteConfig } from "@/lib/site-config";
 import { translateProductColor, translateProductField, translateProductMaterials } from "@/lib/i18n";
+import { normalizeRouteSlug } from "@/lib/text";
 
 function imageForColor(product: Product, color: string) {
   return product.colorImages?.[color] ?? product.gallery[product.colors.indexOf(color)] ?? product.image;
@@ -44,7 +45,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   useEffect(() => {
     fetch("/api/products").then(async (response) => {
       const data = await response.json() as { items?: Product[] };
-      const databaseProduct = data.items?.find((item) => item.slug === resolvedParams.slug);
+      const databaseProduct = data.items?.find((item) => normalizeRouteSlug(item.slug) === normalizeRouteSlug(resolvedParams.slug));
       if (response.ok && databaseProduct) {
         setProduct(databaseProduct);
         setActiveImage(imageForColor(databaseProduct, databaseProduct.colors[0] ?? ""));
