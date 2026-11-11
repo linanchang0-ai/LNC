@@ -2466,6 +2466,7 @@ th {
 }
 
 .variant-options.color-swatches .color-swatch {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2476,6 +2477,25 @@ th {
   color: var(--text);
   text-align: center;
   font-size: 0.75rem;
+}
+
+.color-swatch-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--white);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .color-swatch-image {

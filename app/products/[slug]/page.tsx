@@ -26,7 +26,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const resolvedParams = use(params);
   const [product, setProduct] = useState<Product>();
   const [productLoaded, setProductLoaded] = useState(false);
-  const { addToCart } = useCart();
+  const { addToCart, items } = useCart();
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(product?.gallery[0] ?? "");
@@ -102,6 +102,16 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const hasSizes = Boolean(product.sizes?.length);
   const totalQuantity = hasSizes ? Object.values(sizeQuantities).reduce((sum, value) => sum + value, 0) : quantity;
   const changeSizeQuantity = (size: string, delta: number) => setSizeQuantities((current) => ({ ...current, [size]: Math.max(0, (current[size] ?? 0) + delta) }));
+
+  const currentProductId = String(product.databaseId ?? product.id);
+  const cartQtyByColor = items.reduce((acc, item) => {
+    if (String(item.id) !== currentProductId) return acc;
+    const key = item.color ?? "";
+    acc[key] = (acc[key] ?? 0) + item.quantity;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const badgeCountForColor = (color: string) => (cartQtyByColor[color] ?? 0) + (color === selectedColor ? totalQuantity : 0);
 
   const addSelectionToCart = () => {
     if (totalQuantity < 1) return false;
@@ -179,6 +189,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                   setSizeQuantities({});
                   setQuantity(1);
                 }} disabled={isOutOfStock}>
+                  {badgeCountForColor(color) > 0 ? <span className="color-swatch-badge">{badgeCountForColor(color)}</span> : null}
                   <span className="color-swatch-image"><img src={colorImage} alt={translateProductColor(locale, product.translations, color)} loading="lazy" /></span>
                   <span className="color-swatch-label">{translateProductColor(locale, product.translations, color)}</span>
                 </button>;
