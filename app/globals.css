@@ -2298,6 +2298,10 @@ th {
   stroke-width: 1.75;
 }
 
+.product-detail-page {
+  padding: 24px 0 40px;
+}
+
 .product-detail-layout {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
@@ -2453,6 +2457,54 @@ th {
   min-width: 36px;
   text-align: center;
   font-weight: 600;
+}
+
+.variant-options.color-swatches {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.variant-options.color-swatches .color-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--text);
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.color-swatch-image {
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--secondary-bg);
+}
+
+.color-swatch-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.color-swatch-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.variant-options.color-swatches .color-swatch.is-selected {
+  border-color: var(--accent);
+  background: rgba(226, 35, 26, 0.06);
+  color: var(--text);
+}
+
+.pdp-sticky-bar {
+  display: none;
 }
 
 .detail-assurances {
@@ -3322,6 +3374,85 @@ th {
 
   .detail-actions {
     flex-direction: column;
+  }
+
+  .detail-actions--buy {
+    display: none;
+  }
+
+  .product-detail-page {
+    padding-bottom: 104px;
+  }
+
+  .pdp-sticky-bar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: var(--white);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -8px 24px rgba(13, 27, 61, 0.10);
+  }
+
+  .pdp-sticky-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .pdp-sticky-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--secondary-bg);
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .pdp-sticky-price-box {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .pdp-sticky-price {
+    font-size: 1.05rem;
+    color: var(--text);
+  }
+
+  .pdp-sticky-count {
+    font-size: 0.72rem;
+    color: var(--muted-text);
+  }
+
+  .pdp-sticky-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .pdp-sticky-actions .primary-button,
+  .pdp-sticky-actions .secondary-button {
+    min-height: 44px;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .pdp-sticky-actions .primary-button {
+    flex: 1;
+  }
+
+  .pdp-sticky-price {
+    font-size: 0.98rem;
   }
 
   .summary-card {

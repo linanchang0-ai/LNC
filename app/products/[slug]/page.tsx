@@ -137,7 +137,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   };
 
   return (
-    <div className="container-shell" style={{ padding: "24px 0 40px" }}>
+    <div className="container-shell product-detail-page">
       <div className="product-breadcrumb">
         <button type="button" className="back-button" onClick={handleBackToProducts}>{t("Volver a productos")}</button>
       </div>
@@ -168,14 +168,21 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           </div>}
           <div className="variant-control">
             <div><span>{t("Color")}</span><strong>{translateProductColor(locale, product.translations, selectedColor)}</strong></div>
-            <div className="variant-options">
-              {product.colors.map((color) => <button type="button" key={color} className={selectedColor === color ? "is-selected" : ""} onClick={() => {
-                if (color === selectedColor) return;
-                setSelectedColor(color);
-                setActiveImage(imageForColor(product, color));
-                setSizeQuantities({});
-                setQuantity(1);
-              }} disabled={isOutOfStock}>{translateProductColor(locale, product.translations, color)}</button>)}
+            <div className="variant-options color-swatches">
+              {product.colors.map((color) => {
+                const colorImage = imageForColor(product, color);
+                const active = selectedColor === color;
+                return <button type="button" key={color} className={`color-swatch ${active ? "is-selected" : ""}`} aria-pressed={active} onClick={() => {
+                  if (color === selectedColor) return;
+                  setSelectedColor(color);
+                  setActiveImage(colorImage);
+                  setSizeQuantities({});
+                  setQuantity(1);
+                }} disabled={isOutOfStock}>
+                  <span className="color-swatch-image"><img src={colorImage} alt={translateProductColor(locale, product.translations, color)} loading="lazy" /></span>
+                  <span className="color-swatch-label">{translateProductColor(locale, product.translations, color)}</span>
+                </button>;
+              })}
             </div>
           </div>
           {product.sizes?.length ? <div className="variant-control size-quantity-list" role="group" aria-label={t("Selecciona una talla")}>
@@ -197,7 +204,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <div className="meta-row"><span>{t("Dimensiones")}</span><span>{translateProductField(locale, product.translations, "dimensions", product.dimensions)}</span></div>
           <div className="meta-row"><span>{t("Envío")}</span><span>{t("MXN 150 en pedidos menores a MXN 1,500; gratis desde MXN 1,500")}</span></div>
           <div className="meta-row"><span>{t("Entrega estimada")}</span><span>{t("Aproximadamente 9-15 días")}</span></div>
-          <div className="detail-actions">
+          <div className="detail-actions detail-actions--buy">
             <button
               className="primary-button"
               disabled={isOutOfStock || totalQuantity < 1}
@@ -224,6 +231,32 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <Link href={siteConfig.whatsappNumber ? `https://wa.me/${siteConfig.whatsappNumber}` : "/contact"} {...(siteConfig.whatsappNumber ? { target: "_blank", rel: "noopener noreferrer" } : {})} className="ghost-button">{t("Consultar sobre este producto")}</Link>
           </div>
         </aside>
+      </div>
+
+      <div className="pdp-sticky-bar">
+        <div className="pdp-sticky-summary">
+          <span className="pdp-sticky-badge" aria-hidden="true">{totalQuantity}</span>
+          <div className="pdp-sticky-price-box">
+            <strong className="pdp-sticky-price">{formatPrice(totalQuantity > 0 ? selectedPrice * totalQuantity : 0)}</strong>
+            <span className="pdp-sticky-count">{t("Seleccionado")}: {totalQuantity}</span>
+          </div>
+        </div>
+        <div className="pdp-sticky-actions">
+          <button
+            className="secondary-button"
+            disabled={isOutOfStock || totalQuantity < 1}
+            onClick={() => { addSelectionToCart(); }}
+          >
+            {isOutOfStock ? t("Agotado") : addedNotice ? `✓ ${t("Añadido")}` : t("Añadir al carrito")}
+          </button>
+          <button
+            className="primary-button"
+            disabled={isOutOfStock || totalQuantity < 1}
+            onClick={() => { if (addSelectionToCart()) router.push("/checkout"); }}
+          >
+            {isOutOfStock ? t("Agotado") : t("Comprar ahora")}
+          </button>
+        </div>
       </div>
 
       <section style={{ marginTop: 26 }}>

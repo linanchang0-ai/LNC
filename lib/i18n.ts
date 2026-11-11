@@ -78,6 +78,7 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Aumentar cantidad": { en: "Increase quantity", zh: "增加数量" },
   "Eliminar": { en: "Remove", zh: "删除" },
   "Subtotal": { en: "Subtotal", zh: "小计" },
+  "Seleccionado": { en: "Selected", zh: "已选" },
   "Código promocional": { en: "Promo code", zh: "优惠码" },
   "Aplicar": { en: "Apply", zh: "应用" },
   "Descuento": { en: "Discount", zh: "折扣" },
