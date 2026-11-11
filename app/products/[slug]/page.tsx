@@ -28,10 +28,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [productLoaded, setProductLoaded] = useState(false);
   const { addToCart, items } = useCart();
   const router = useRouter();
-  const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(product?.gallery[0] ?? "");
   const [selectedColor, setSelectedColor] = useState(product?.colors[0] ?? "");
-  const [sizeQuantities, setSizeQuantities] = useState<Record<string, number>>({});
+  const [sizeQuantitiesByColor, setSizeQuantitiesByColor] = useState<Record<string, Record<string, number>>>({});
+  const [quantityByColor, setQuantityByColor] = useState<Record<string, number>>({});
   const [addedNotice, setAddedNotice] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const { toggle, isSaved } = useWishlist();
@@ -49,8 +49,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         setProduct(databaseProduct);
         setActiveImage(imageForColor(databaseProduct, databaseProduct.colors[0] ?? ""));
         setSelectedColor(databaseProduct.colors[0] ?? "");
-        setSizeQuantities({});
-        setQuantity(1);
+        setSizeQuantitiesByColor({});
+        setQuantityByColor({});
         // Meta Pixel: ViewContent
         metaEvents.viewContent({
           content_name: databaseProduct.name,
@@ -76,8 +76,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     const matchingColor = product.colors.find((color) => imageForColor(product, color) === image);
     if (matchingColor && matchingColor !== selectedColor) {
       setSelectedColor(matchingColor);
-      setSizeQuantities({});
-      setQuantity(1);
     }
   };
 
@@ -100,8 +98,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   };
 
   const hasSizes = Boolean(product.sizes?.length);
-  const totalQuantity = hasSizes ? Object.values(sizeQuantities).reduce((sum, value) => sum + value, 0) : quantity;
-  const changeSizeQuantity = (size: string, delta: number) => setSizeQuantities((current) => ({ ...current, [size]: Math.max(0, (current[size] ?? 0) + delta) }));
+  const currentSizeQuantities = sizeQuantitiesByColor[selectedColor] ?? {};
+  const currentQuantity = quantityByColor[selectedColor] ?? 1;
+  const totalQuantity = hasSizes ? Object.values(currentSizeQuantities).reduce((sum, value) => sum + value, 0) : currentQuantity;
+  const changeSizeQuantity = (size: string, delta: number) => setSizeQuantitiesByColor((current) => {
+    const colorMap = current[selectedColor] ?? {};
+    return { ...current, [selectedColor]: { ...colorMap, [size]: Math.max(0, (colorMap[size] ?? 0) + delta) } };
+  });
+  const changeQuantity = (delta: number) => setQuantityByColor((current) => ({ ...current, [selectedColor]: Math.max(1, (current[selectedColor] ?? 1) + delta) }));
 
   const currentProductId = String(product.databaseId ?? product.id);
   const cartQtyByColor = items.reduce((acc, item) => {
@@ -111,17 +115,21 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     return acc;
   }, {} as Record<string, number>);
 
-  const badgeCountForColor = (color: string) => (cartQtyByColor[color] ?? 0) + (color === selectedColor ? totalQuantity : 0);
+  const pendingCountForColor = (color: string) => hasSizes
+    ? Object.values(sizeQuantitiesByColor[color] ?? {}).reduce((sum, value) => sum + value, 0)
+    : (quantityByColor[color] ?? 0);
+
+  const badgeCountForColor = (color: string) => (cartQtyByColor[color] ?? 0) + pendingCountForColor(color);
 
   const addSelectionToCart = () => {
     if (totalQuantity < 1) return false;
     const base = { id: product.databaseId ?? product.id, slug: product.slug, name: product.name, translations: product.translations, price: selectedPrice, image: imageForColor(product, selectedColor), color: selectedColor };
-    const lines = hasSizes ? (product.sizes ?? []).map((size) => ({ size, count: sizeQuantities[size] ?? 0 })) : [{ size: undefined, count: quantity }];
+    const lines = hasSizes ? (product.sizes ?? []).map((size) => ({ size, count: currentSizeQuantities[size] ?? 0 })) : [{ size: undefined, count: currentQuantity }];
     for (const line of lines) for (let index = 0; index < line.count; index += 1) addToCart({ ...base, size: line.size });
     // Meta Pixel: AddToCart
     metaEvents.addToCart({ content_name: product.name, content_ids: [product.databaseId ?? product.id], content_type: "product", value: selectedPrice * totalQuantity, currency: "MXN", quantity: totalQuantity });
-    setSizeQuantities({});
-    setQuantity(1);
+    setSizeQuantitiesByColor((current) => { const next = { ...current }; delete next[selectedColor]; return next; });
+    setQuantityByColor((current) => { const next = { ...current }; delete next[selectedColor]; return next; });
     setAddedNotice(true);
     window.setTimeout(() => setAddedNotice(false), 2000);
     return true;
@@ -171,9 +179,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           {hasSizes ? null : <div className="quantity-control" aria-label={t("Cantidad")}>
             <span>{t("Cantidad")}</span>
             <div>
-              <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label={t("Reducir cantidad")} disabled={isOutOfStock}>−</button>
-              <strong>{quantity}</strong>
-              <button type="button" onClick={() => setQuantity((value) => value + 1)} aria-label={t("Aumentar cantidad")} disabled={isOutOfStock}>+</button>
+              <button type="button" onClick={() => changeQuantity(-1)} aria-label={t("Reducir cantidad")} disabled={isOutOfStock}>−</button>
+              <strong>{currentQuantity}</strong>
+              <button type="button" onClick={() => changeQuantity(1)} aria-label={t("Aumentar cantidad")} disabled={isOutOfStock}>+</button>
             </div>
           </div>}
           <div className="variant-control">
@@ -186,8 +194,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                   if (color === selectedColor) return;
                   setSelectedColor(color);
                   setActiveImage(colorImage);
-                  setSizeQuantities({});
-                  setQuantity(1);
                 }} disabled={isOutOfStock}>
                   {badgeCountForColor(color) > 0 ? <span className="color-swatch-badge">{badgeCountForColor(color)}</span> : null}
                   <span className="color-swatch-image"><img src={colorImage} alt={translateProductColor(locale, product.translations, color)} loading="lazy" /></span>
@@ -199,7 +205,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           {product.sizes?.length ? <div className="variant-control size-quantity-list" role="group" aria-label={t("Selecciona una talla")}>
             <div><span>{t("Talla")}</span><strong>{totalQuantity > 0 ? `${t("Cantidad")}: ${totalQuantity}` : t("Elige una talla")}</strong></div>
             {product.sizes.map((size) => {
-              const count = sizeQuantities[size] ?? 0;
+              const count = currentSizeQuantities[size] ?? 0;
               return <div className={`size-quantity-row ${count > 0 ? "is-selected" : ""}`} key={size}>
                 <strong>{size}</strong>
                 <div className="size-quantity-stepper">
