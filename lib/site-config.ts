@@ -2,7 +2,7 @@ const whatsappNumber = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim() || "8615
 
 const socialLinks = {
   instagram: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM?.trim() || "",
-  facebook: process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK?.trim() || "",
+  facebook: process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK?.trim() || "https://www.facebook.com/profile.php?id=61579683620534",
   tiktok: process.env.NEXT_PUBLIC_SOCIAL_TIKTOK?.trim() || "",
 };
 
