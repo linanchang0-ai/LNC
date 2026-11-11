@@ -50,6 +50,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         setActiveImage(imageForColor(databaseProduct, databaseProduct.colors[0] ?? ""));
         setSelectedColor(databaseProduct.colors[0] ?? "");
         setSizeQuantities({});
+        setQuantity(1);
         // Meta Pixel: ViewContent
         metaEvents.viewContent({
           content_name: databaseProduct.name,
@@ -73,7 +74,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const selectImage = (image: string) => {
     setActiveImage(image);
     const matchingColor = product.colors.find((color) => imageForColor(product, color) === image);
-    if (matchingColor) setSelectedColor(matchingColor);
+    if (matchingColor && matchingColor !== selectedColor) {
+      setSelectedColor(matchingColor);
+      setSizeQuantities({});
+      setQuantity(1);
+    }
   };
 
   const showAdjacentImage = (direction: 1 | -1) => {
@@ -164,7 +169,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <div className="variant-control">
             <div><span>{t("Color")}</span><strong>{translateProductColor(locale, product.translations, selectedColor)}</strong></div>
             <div className="variant-options">
-              {product.colors.map((color) => <button type="button" key={color} className={selectedColor === color ? "is-selected" : ""} onClick={() => { setSelectedColor(color); setActiveImage(imageForColor(product, color)); }} disabled={isOutOfStock}>{translateProductColor(locale, product.translations, color)}</button>)}
+              {product.colors.map((color) => <button type="button" key={color} className={selectedColor === color ? "is-selected" : ""} onClick={() => {
+                if (color === selectedColor) return;
+                setSelectedColor(color);
+                setActiveImage(imageForColor(product, color));
+                setSizeQuantities({});
+                setQuantity(1);
+              }} disabled={isOutOfStock}>{translateProductColor(locale, product.translations, color)}</button>)}
             </div>
           </div>
           {product.sizes?.length ? <div className="variant-control size-quantity-list" role="group" aria-label={t("Selecciona una talla")}>
