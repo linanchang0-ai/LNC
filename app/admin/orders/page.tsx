@@ -1,6 +1,7 @@
 "use client";
 
 import { formatPrice } from "@/lib/admin-data";
+import { refundStatusLabel, returnStatusLabel } from "@/lib/admin-labels";
 import { useAdminResource } from "@/components/admin-data-loader";
 import { useState } from "react";
 
@@ -248,8 +249,8 @@ export default function AdminOrdersPage() {
             {detail.shipping_label_url ? <button type="button" className="small-button" onClick={() => void removeLabel()} disabled={labelBusy}>删除面单</button> : null}
           </div>
           {labelError ? <p className="error-box">{labelError}</p> : null}
-          {detail.returns.length ? <><h3 style={{ marginTop: 18 }}>退货</h3>{detail.returns.map((item) => <div className="meta-row" key={item.id}><span>{item.reason ?? "退货"}: {item.status ?? "待处理"}</span><span>{item.restocked_at ? "已补回库存" : ""}</span></div>)}</> : null}
-          {detail.refunds.length ? <><h3 style={{ marginTop: 18 }}>退款记录</h3>{detail.refunds.map((item) => <div className="meta-row" key={item.id}><span>{item.refund_reason ?? "退款"}: {item.refund_status ?? "待处理"}</span><span>{formatPrice(Number(item.refund_amount ?? 0))}</span></div>)}</> : null}
+          {detail.returns.length ? <><h3 style={{ marginTop: 18 }}>退货</h3>{detail.returns.map((item) => <div className="meta-row" key={item.id}><span>{item.reason ?? "退货"}: {returnStatusLabel(item.status)}</span><span>{item.restocked_at ? "已补回库存" : ""}</span></div>)}</> : null}
+          {detail.refunds.length ? <><h3 style={{ marginTop: 18 }}>退款记录</h3>{detail.refunds.map((item) => <div className="meta-row" key={item.id}><span>{item.refund_reason ?? "退款"}: {refundStatusLabel(item.refund_status)}</span><span>{formatPrice(Number(item.refund_amount ?? 0))}</span></div>)}</> : null}
           {detail.payment_status === "Pagado" && detail.paypal_capture_id ? <><h3 style={{ marginTop: 18 }}>申请退款</h3><div className="form-grid"><label>退款金额<input type="number" min="0.01" max={detail.total} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} placeholder={`最多 ${formatPrice(detail.total)}`} /></label><label>退款原因<input value={refundReason} onChange={(event) => setRefundReason(event.target.value)} placeholder="退款原因" /></label></div><button className="small-button" onClick={() => void refundFromDetail()} disabled={refunding}>{refunding ? "处理中" : "申请退款"}</button>{refundError ? <p className="error-box">{refundError}</p> : null}</> : null}
         </section> : null}
       </div>

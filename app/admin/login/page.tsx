@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
           <p className="muted" style={{ marginTop: 0 }}>登录后管理商品、订单和退款。</p>
 
           <div className="field">
-            <label>Email</label>
+            <label>邮箱</label>
             <input
               type="email"
               value={email}

@@ -1,6 +1,7 @@
 "use client";
 
 import { formatPrice } from "@/lib/admin-data";
+import { refundStatusLabel } from "@/lib/admin-labels";
 import { useAdminResource } from "@/components/admin-data-loader";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default function AdminRefundsPage() {
                   <td>{refund.id.slice(0, 8)}</td>
                   <td>{refund.orders?.customer_name ?? refund.orders?.guest_email ?? "-"}</td>
                   <td>{formatPrice(refund.refund_amount)}</td>
-                  <td><span className="status-pill">{refund.refund_status ?? "待处理"}</span></td>
+                  <td><span className="status-pill">{refundStatusLabel(refund.refund_status)}</span></td>
                   <td>{refund.orders?.order_number ?? refund.order_id.slice(0, 8)}</td>
                   <td>{refund.refund_reason ?? "-"}</td>
                 </tr>

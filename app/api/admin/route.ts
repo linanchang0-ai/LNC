@@ -31,7 +31,7 @@ function recordAdminAction(supabase: NonNullable<ReturnType<typeof createAdminDa
 
 export async function GET(request: Request) {
   const authorized = await authorizedClient(request);
-  if (!authorized) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!authorized) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, role } = authorized;
 
   const resource = new URL(request.url).searchParams.get("resource");
@@ -49,29 +49,29 @@ export async function GET(request: Request) {
     categories: ["admin", "operations"],
     coupons: ["admin", "operations"],
   };
-  if (!resource || !resourceRoles[resource] || !hasRole(role, resourceRoles[resource])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  if (!resource || !resourceRoles[resource] || !hasRole(role, resourceRoles[resource])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
   if (resource === "dashboard") {
     const [orders, products, refunds] = await Promise.all([
       supabase.from("orders").select("order_number, customer_name, guest_email, total, order_status, payment_status, created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("products").select("id, name, stock, inventory_quantity, price, featured, is_published").order("created_at", { ascending: false }),
       supabase.from("refunds").select("refund_amount, refund_status"),
     ]);
-    if (orders.error || products.error || refunds.error) return NextResponse.json({ error: "No se pudieron cargar los datos del panel." }, { status: 500 });
+    if (orders.error || products.error || refunds.error) return NextResponse.json({ error: "后台概览数据加载失败。" }, { status: 500 });
     return NextResponse.json({ orders: orders.data, products: products.data, refunds: refunds.data, customerCount: new Set((orders.data ?? []).map((order) => order.guest_email).filter(Boolean)).size });
   }
 
   if (resource === "order") {
     const id = new URL(request.url).searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "Pedido no válido." }, { status: 400 });
+    if (!id) return NextResponse.json({ error: "订单无效。" }, { status: 400 });
     const { data: order, error: orderError } = await supabase.from("orders").select("id, order_number, customer_name, guest_email, phone, shipping_address, total, currency, order_status, payment_status, paypal_order_id, paypal_capture_id, tracking_number, shipping_carrier, shipped_at, shipping_label_path, created_at").eq("id", id).maybeSingle();
-    if (orderError) return NextResponse.json({ error: "No se pudo cargar el pedido." }, { status: 500 });
-    if (!order) return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
+    if (orderError) return NextResponse.json({ error: "订单加载失败。" }, { status: 500 });
+    if (!order) return NextResponse.json({ error: "未找到该订单。" }, { status: 404 });
     const [items, returns, refunds] = await Promise.all([
       supabase.from("order_items").      select("id, product_id, product_name, price, quantity").eq("order_id", id),
       supabase.from("returns").select("id, reason, description, status, inspection_notes, restock_approved, created_at, restocked_at").eq("order_id", id).order("created_at", { ascending: false }),
       supabase.from("refunds").select("id, refund_amount, refund_status, refund_reason, refund_date, created_at").eq("order_id", id).order("created_at", { ascending: false }),
     ]);
-    if (items.error || returns.error || refunds.error) return NextResponse.json({ error: "No se pudieron cargar los detalles del pedido." }, { status: 500 });
+    if (items.error || returns.error || refunds.error) return NextResponse.json({ error: "订单详情加载失败。" }, { status: 500 });
     const productIds = [...new Set((items.data ?? []).map((item) => item.product_id).filter(Boolean))];
     const { data: productImages } = productIds.length ? await supabase.from("products").select("id, image_url, gallery").in("id", productIds) : { data: [] };
     const imageById = new Map((productImages ?? []).map((product) => [product.id, product.image_url || product.gallery?.[0] || null]));
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
 
   if (resource === "order-report") {
     const { data, error } = await supabase.from("orders").select("order_number, customer_name, guest_email, phone, shipping_address, total, currency, order_status, payment_status, created_at, order_items(product_name, price, quantity)").order("created_at", { ascending: false });
-    if (error) return NextResponse.json({ error: "No se pudo generar el reporte de pedidos." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "订单明细导出失败。" }, { status: 500 });
     return NextResponse.json({ items: data ?? [] });
   }
 
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
       data = fallbackResult.data;
       error = fallbackResult.error;
     }
-    if (error) return NextResponse.json({ error: "No se pudieron cargar los datos." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
     return NextResponse.json({ items: data ?? [] });
   }
 
@@ -118,10 +118,10 @@ export async function GET(request: Request) {
 
   if (resource === "customers") {
     const { data, error } = await supabase.from("orders").select("guest_email, customer_name, total, shipping_address, payment_status").eq("payment_status", "Pagado").order("created_at", { ascending: false });
-    if (error) return NextResponse.json({ error: "No se pudieron cargar los clientes." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "客户数据加载失败。" }, { status: 500 });
     const customers = Object.values((data ?? []).reduce<Record<string, { email: string; name: string; city: string; orders: number; totalSpent: number }>>((result, order) => {
-      const email = order.guest_email ?? "Sin correo";
-      const current = result[email] ?? { email, name: order.customer_name ?? "Cliente", city: (order.shipping_address as { city?: string } | null)?.city ?? "-", orders: 0, totalSpent: 0 };
+      const email = order.guest_email ?? "无邮箱";
+      const current = result[email] ?? { email, name: order.customer_name ?? "客户", city: (order.shipping_address as { city?: string } | null)?.city ?? "-", orders: 0, totalSpent: 0 };
       current.orders += 1;
       current.totalSpent += Number(order.total ?? 0);
       result[email] = current;
@@ -130,9 +130,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ items: customers });
   }
 
-  if (!resource || !(resource in queries)) return NextResponse.json({ error: "Recurso no encontrado." }, { status: 404 });
+  if (!resource || !(resource in queries)) return NextResponse.json({ error: "未找到对应资源。" }, { status: 404 });
   const { data, error } = await queries[resource as keyof typeof queries]();
-  if (error) return NextResponse.json({ error: "No se pudieron cargar los datos." }, { status: 500 });
+  if (error) return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
   return NextResponse.json({ items: data });
 }
 
@@ -148,36 +148,36 @@ function stockLabel(quantity: number) {
 
 export async function POST(request: Request) {
   const authorized = await authorizedClient(request);
-  if (!authorized) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!authorized) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
   let body: { name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; code?: string; discountType?: "percentage" | "fixed"; discountValue?: number; minimumSubtotal?: number; expiresAt?: string; maxUses?: number | null };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "La solicitud no es válida." }, { status: 400 });
+    return NextResponse.json({ error: "请求数据无效。" }, { status: 400 });
   }
   const { name, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, code, discountType, discountValue, minimumSubtotal, expiresAt, maxUses } = body;
   if (resource === "categories") {
-    if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+    if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
     const categoryName = name?.trim() ?? "";
     const slug = productSlug(categoryName);
-    if (!categoryName || !slug) return NextResponse.json({ error: "Indica un nombre de categoría válido." }, { status: 400 });
+    if (!categoryName || !slug) return NextResponse.json({ error: "请填写有效的分类名称。" }, { status: 400 });
     const { data, error } = await supabase.from("categories").insert({ name: categoryName, slug }).select("id, slug, name").single();
-    if (error) return NextResponse.json({ error: error.code === "23505" ? "Ya existe esta categoría." : "No se pudo crear la categoría." }, { status: 500 });
+    if (error) return NextResponse.json({ error: error.code === "23505" ? "该分类已存在。" : "分类创建失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "created", "category", data.id, { name: data.name, slug: data.slug });
     return NextResponse.json({ item: data }, { status: 201 });
   }
   if (resource === "coupons") {
-    if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+    if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
     const couponCode = code?.trim().toUpperCase() ?? "";
     const value = Number(discountValue);
     const minimum = Number(minimumSubtotal ?? 0);
     const limit = maxUses === null || maxUses === undefined || maxUses === 0 ? null : Number(maxUses);
-    if (!/^[A-Z0-9_-]{3,40}$/.test(couponCode) || !["percentage", "fixed"].includes(discountType ?? "") || !Number.isFinite(value) || value <= 0 || (discountType === "percentage" && value > 100) || !Number.isFinite(minimum) || minimum < 0 || (limit !== null && (!Number.isInteger(limit) || limit < 1))) return NextResponse.json({ error: "Los datos del cupón no son válidos." }, { status: 400 });
+    if (!/^[A-Z0-9_-]{3,40}$/.test(couponCode) || !["percentage", "fixed"].includes(discountType ?? "") || !Number.isFinite(value) || value <= 0 || (discountType === "percentage" && value > 100) || !Number.isFinite(minimum) || minimum < 0 || (limit !== null && (!Number.isInteger(limit) || limit < 1))) return NextResponse.json({ error: "优惠码信息无效。" }, { status: 400 });
     const expiration = expiresAt?.trim() ? new Date(expiresAt).toISOString() : null;
-    if (expiration && Number.isNaN(new Date(expiration).getTime())) return NextResponse.json({ error: "La fecha de vencimiento no es válida." }, { status: 400 });
+    if (expiration && Number.isNaN(new Date(expiration).getTime())) return NextResponse.json({ error: "到期日期无效。" }, { status: 400 });
     const { data, error } = await supabase.from("promo_codes").insert({ code: couponCode, discount_type: discountType, discount_value: Math.round(value * 100) / 100, minimum_subtotal: Math.round(minimum * 100) / 100, expires_at: expiration, max_uses: limit }).select("id, code, discount_type, discount_value, minimum_subtotal, starts_at, expires_at, max_uses, uses_count, is_active, created_at").single();
-    if (error) return NextResponse.json({ error: error.code === "23505" ? "Este código ya existe." : "No se pudo crear el cupón." }, { status: 500 });
+    if (error) return NextResponse.json({ error: error.code === "23505" ? "该优惠码已存在。" : "优惠码创建失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "created", "coupon", data.id, { code: data.code });
     return NextResponse.json({ item: data }, { status: 201 });
   }
@@ -186,16 +186,16 @@ export async function POST(request: Request) {
   const productPrice = Number(price);
   const productShippingFee = Number(shippingFee ?? 0);
   const quantity = Number(inventoryQuantity);
-  if (!cleanName || !cleanCategory) return NextResponse.json({ error: "Indica un nombre y una categoría válidos." }, { status: 400 });
-  if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  if (!cleanName || !cleanCategory) return NextResponse.json({ error: "请填写有效的商品名称和分类。" }, { status: 400 });
+  if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
   const { data: selectedCategory } = await supabase.from("categories").select("id").eq("slug", cleanCategory).maybeSingle();
-  if (!selectedCategory) return NextResponse.json({ error: "La categoría no es válida." }, { status: 400 });
-  if (!Number.isFinite(productPrice) || productPrice <= 0) return NextResponse.json({ error: "El precio debe ser mayor a cero." }, { status: 400 });
-  if (!Number.isFinite(productShippingFee) || productShippingFee < 0) return NextResponse.json({ error: "El costo de envío no puede ser negativo." }, { status: 400 });
-  if (!Number.isInteger(quantity) || quantity < 0) return NextResponse.json({ error: "El inventario debe ser un número entero igual o mayor a cero." }, { status: 400 });
-  if (sizes !== undefined && (!Array.isArray(sizes) || sizes.some((size) => typeof size !== "string" || !size.trim() || size.trim().length > 30))) return NextResponse.json({ error: "Las tallas no son válidas." }, { status: 400 });
+  if (!selectedCategory) return NextResponse.json({ error: "分类无效。" }, { status: 400 });
+  if (!Number.isFinite(productPrice) || productPrice <= 0) return NextResponse.json({ error: "价格必须大于 0。" }, { status: 400 });
+  if (!Number.isFinite(productShippingFee) || productShippingFee < 0) return NextResponse.json({ error: "运费不能为负数。" }, { status: 400 });
+  if (!Number.isInteger(quantity) || quantity < 0) return NextResponse.json({ error: "库存必须为不小于 0 的整数。" }, { status: 400 });
+  if (sizes !== undefined && (!Array.isArray(sizes) || sizes.some((size) => typeof size !== "string" || !size.trim() || size.trim().length > 30))) return NextResponse.json({ error: "尺码选项无效。" }, { status: 400 });
   const productTranslations = translations === undefined ? {} : normalizeProductTranslations(translations);
-  if (!productTranslations) return NextResponse.json({ error: "Las traducciones del producto no son válidas." }, { status: 400 });
+  if (!productTranslations) return NextResponse.json({ error: "商品译文无效。" }, { status: 400 });
   const sizeOptions = [...new Set((sizes ?? []).map((size) => size.trim()))];
   let slug = productSlug(cleanName);
   if (!slug) slug = `producto-${Date.now().toString(36)}`;
@@ -213,7 +213,7 @@ export async function POST(request: Request) {
     ...(colorPrices === undefined ? {} : { color_prices: colorPrices }),
   };
   const configuredColorPrices = content.color_prices ?? {};
-  if ((primaryImage !== undefined && primaryImage !== "" && !primaryImage.startsWith("https://")) || content.gallery.some((image) => !image.startsWith("https://")) || content.detail_images.some((image) => !image.startsWith("https://")) || Object.values(content.color_images).some((image) => typeof image !== "string" || !image.startsWith("https://")) || Object.entries(configuredColorPrices).some(([color, value]) => !color.trim() || typeof value !== "number" || !Number.isFinite(value) || value <= 0)) return NextResponse.json({ error: "Los datos del producto no son válidos." }, { status: 400 });
+  if ((primaryImage !== undefined && primaryImage !== "" && !primaryImage.startsWith("https://")) || content.gallery.some((image) => !image.startsWith("https://")) || content.detail_images.some((image) => !image.startsWith("https://")) || Object.values(content.color_images).some((image) => typeof image !== "string" || !image.startsWith("https://")) || Object.entries(configuredColorPrices).some(([color, value]) => !color.trim() || typeof value !== "number" || !Number.isFinite(value) || value <= 0)) return NextResponse.json({ error: "商品数据无效。" }, { status: 400 });
   const { data, error } = await supabase.from("products").insert({
     slug,
     name: cleanName,
@@ -226,70 +226,70 @@ export async function POST(request: Request) {
     image_url: primaryImage ?? "",
     is_published: false,
   }).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images").single();
-  if (error) return NextResponse.json({ error: error.code === "23505" ? "Ya existe un producto con ese nombre." : "No se pudo crear el producto." }, { status: 500 });
+  if (error) return NextResponse.json({ error: error.code === "23505" ? "已存在同名商品。" : "商品创建失败。" }, { status: 500 });
   void recordAdminAction(supabase, adminEmail, "created", "product", data.id, { name: data.name, isPublished: data.is_published });
   return NextResponse.json({ item: data }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
   const authorized = await authorizedClient(request);
-  if (!authorized) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!authorized) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
   let body: { id?: string; featured?: boolean; isPublished?: boolean; name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; status?: string; trackingNumber?: string; shippingCarrier?: string; restockApproved?: boolean; inspectionNotes?: string; reply?: string; isActive?: boolean };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "La solicitud no es válida." }, { status: 400 });
+    return NextResponse.json({ error: "请求数据无效。" }, { status: 400 });
   }
   const { id, featured, isPublished, name, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, status, trackingNumber, shippingCarrier, restockApproved, inspectionNotes, reply, isActive } = body;
   if (resource === "coupons") {
-    if (!id || !hasRole(role, ["admin", "operations"]) || typeof isActive !== "boolean") return NextResponse.json({ error: "Cupón no válido." }, { status: 400 });
+    if (!id || !hasRole(role, ["admin", "operations"]) || typeof isActive !== "boolean") return NextResponse.json({ error: "优惠码无效。" }, { status: 400 });
     const { data, error } = await supabase.from("promo_codes").update({ is_active: isActive }).eq("id", id).select("id, code, discount_type, discount_value, minimum_subtotal, starts_at, expires_at, max_uses, uses_count, is_active, created_at").single();
-    if (error) return NextResponse.json({ error: "No se pudo actualizar el cupón." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "优惠码更新失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "updated", "coupon", id, { isActive });
     return NextResponse.json({ item: data });
   }
   if (resource === "returns") {
-    if (!hasRole(role, ["admin", "operations", "support", "warehouse"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+    if (!hasRole(role, ["admin", "operations", "support", "warehouse"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
     const allowedStatuses = ["Solicitud de devolución", "En revisión", "Aprobada", "Rechazada", "Recibida", "Cerrada"];
-    if (!id || !status || !allowedStatuses.includes(status)) return NextResponse.json({ error: "Estado de devolución inválido." }, { status: 400 });
+    if (!id || !status || !allowedStatuses.includes(status)) return NextResponse.json({ error: "退货状态无效。" }, { status: 400 });
     if (status === "Recibida") {
       const { data, error } = await supabase.rpc("receive_return", { p_return_id: id, p_inspection_notes: inspectionNotes?.trim() || "", p_restock_approved: restockApproved === true });
       const item = data?.[0];
-      if (error || !item) return NextResponse.json({ error: error?.message ?? "No se pudo recibir la devolución." }, { status: 500 });
+      if (error || !item) return NextResponse.json({ error: error?.message ?? "收货登记失败。" }, { status: 500 });
       void recordAdminAction(supabase, adminEmail, "received", "return", id, { restockApproved: restockApproved === true });
       return NextResponse.json({ item, restocked: restockApproved === true });
     }
     const { data, error } = await supabase.from("returns").update({ status }).eq("id", id).select("id, status, inspection_notes, restock_approved, restocked_at").single();
-    if (error) return NextResponse.json({ error: "No se pudo actualizar la devolución." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "退货信息更新失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "updated", "return", id, { status });
     return NextResponse.json({ item: data });
   }
   if (resource === "messages") {
-    if (!hasRole(role, ["admin", "operations", "support"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+    if (!hasRole(role, ["admin", "operations", "support"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
     const allowedStatuses = ["Nuevo", "En proceso", "Resuelto"];
-    if (!id || !status || !allowedStatuses.includes(status)) return NextResponse.json({ error: "Estado de mensaje inválido." }, { status: 400 });
+    if (!id || !status || !allowedStatuses.includes(status)) return NextResponse.json({ error: "消息状态无效。" }, { status: 400 });
     const replyText = reply?.trim() || null;
     const { data, error } = await supabase.from("contact_messages").update({ status, resolved_at: status === "Resuelto" ? new Date().toISOString() : null, ...(replyText ? { reply: replyText, replied_at: new Date().toISOString(), replied_by: adminEmail } : {}) }).eq("id", id).select("id, name, email, status, resolved_at, reply, replied_at, replied_by").single();
-    if (error) return NextResponse.json({ error: "No se pudo actualizar el mensaje." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "消息更新失败。" }, { status: 500 });
     if (replyText) void sendContactReply({ email: data.email, customerName: data.name, message: replyText });
     void recordAdminAction(supabase, adminEmail, replyText ? "replied" : "updated", "contact_message", id, { status });
     return NextResponse.json({ item: data });
   }
   if (resource === "orders") {
-    if (!hasRole(role, ["admin", "operations", "warehouse"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+    if (!hasRole(role, ["admin", "operations", "warehouse"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
     const allowedStatuses = ["Pendiente", "Procesando", "Enviado", "Entregado", "Cancelado"];
-    if (!id || !status || !allowedStatuses.includes(status)) return NextResponse.json({ error: "Estado de pedido inválido." }, { status: 400 });
+    if (!id || !status || !allowedStatuses.includes(status)) return NextResponse.json({ error: "订单状态无效。" }, { status: 400 });
     const tracking = trackingNumber?.trim() ?? "";
     const carrier = shippingCarrier?.trim() ?? "";
-    if (status === "Enviado" && (!tracking || !carrier)) return NextResponse.json({ error: "Indica paquetería y número de guía antes de enviar." }, { status: 400 });
+    if (status === "Enviado" && (!tracking || !carrier)) return NextResponse.json({ error: "发货前请填写物流公司和物流单号。" }, { status: 400 });
     const { data, error } = await supabase.from("orders").update({
       order_status: status,
       tracking_number: tracking || null,
       shipping_carrier: carrier || null,
       shipped_at: status === "Enviado" ? new Date().toISOString() : null,
     }).eq("id", id).select("id, order_number, guest_email, customer_name, order_status, tracking_number, shipping_carrier, shipped_at, shipping_email_sent_at").single();
-    if (error) return NextResponse.json({ error: "No se pudo actualizar el envío." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "物流信息更新失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "updated", "order", id, { status, trackingNumber: tracking || null, shippingCarrier: carrier || null });
     if (status === "Enviado" && !data.shipping_email_sent_at && data.guest_email && data.shipping_carrier && data.tracking_number) {
       void sendShippingNotification({ email: data.guest_email, customerName: data.customer_name, orderNumber: data.order_number, shippingCarrier: data.shipping_carrier, trackingNumber: data.tracking_number })
@@ -298,118 +298,118 @@ export async function PATCH(request: Request) {
     }
     return NextResponse.json({ item: data });
   }
-  if (!id) return NextResponse.json({ error: "Producto inválido." }, { status: 400 });
-  if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  if (!id) return NextResponse.json({ error: "商品无效。" }, { status: 400 });
+  if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
   const update: { featured?: boolean; is_published?: boolean; name?: string; category?: string; price?: number; shipping_fee?: number; stock?: string; inventory_quantity?: number; image_url?: string; color_images?: Record<string, string>; color_prices?: Record<string, number>; gallery?: string[]; detail_images?: string[]; short_description?: string; description?: string; translations?: ProductTranslations; materials?: string[]; dimensions?: string; colors?: string[]; size_options?: string[] } = {};
   if (typeof featured === "boolean") update.featured = featured;
   if (typeof isPublished === "boolean") update.is_published = isPublished;
   if (name !== undefined) {
-    if (!name.trim()) return NextResponse.json({ error: "El nombre es obligatorio." }, { status: 400 });
+    if (!name.trim()) return NextResponse.json({ error: "商品名称不能为空。" }, { status: 400 });
     update.name = name.trim();
   }
   if (category !== undefined) {
     const categorySlug = category.trim();
     const { data: selectedCategory } = await supabase.from("categories").select("id").eq("slug", categorySlug).maybeSingle();
-    if (!selectedCategory) return NextResponse.json({ error: "La categoría no es válida." }, { status: 400 });
+    if (!selectedCategory) return NextResponse.json({ error: "分类无效。" }, { status: 400 });
     update.category = categorySlug;
   }
   if (price !== undefined) {
-    if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: "El precio debe ser mayor a cero." }, { status: 400 });
+    if (!Number.isFinite(price) || price <= 0) return NextResponse.json({ error: "价格必须大于 0。" }, { status: 400 });
     update.price = Math.round(price * 100) / 100;
   }
   if (shippingFee !== undefined) {
-    if (!Number.isFinite(shippingFee) || shippingFee < 0) return NextResponse.json({ error: "El costo de envío no puede ser negativo." }, { status: 400 });
+    if (!Number.isFinite(shippingFee) || shippingFee < 0) return NextResponse.json({ error: "运费不能为负数。" }, { status: 400 });
     update.shipping_fee = Math.round(shippingFee * 100) / 100;
   }
   if (inventoryQuantity !== undefined) {
-    if (!Number.isInteger(inventoryQuantity) || inventoryQuantity < 0) return NextResponse.json({ error: "El inventario debe ser un número entero igual o mayor a cero." }, { status: 400 });
+    if (!Number.isInteger(inventoryQuantity) || inventoryQuantity < 0) return NextResponse.json({ error: "库存必须为不小于 0 的整数。" }, { status: 400 });
     update.inventory_quantity = inventoryQuantity;
     update.stock = stockLabel(inventoryQuantity);
   }
   if (gallery !== undefined) {
     if (!Array.isArray(gallery) || gallery.some((image) => typeof image !== "string" || !image.startsWith("https://"))) {
-      return NextResponse.json({ error: "Las imágenes del producto no son válidas." }, { status: 400 });
+      return NextResponse.json({ error: "商品图片无效。" }, { status: 400 });
     }
     update.gallery = gallery;
   }
   if (detailImages !== undefined) {
     if (!Array.isArray(detailImages) || detailImages.some((image) => typeof image !== "string" || !image.startsWith("https://"))) {
-      return NextResponse.json({ error: "Las imágenes de detalle no son válidas." }, { status: 400 });
+      return NextResponse.json({ error: "详情图无效。" }, { status: 400 });
     }
     update.detail_images = detailImages;
   }
   if (primaryImage !== undefined) {
-    if (primaryImage !== "" && !primaryImage.startsWith("https://")) return NextResponse.json({ error: "La imagen principal no es válida." }, { status: 400 });
+    if (primaryImage !== "" && !primaryImage.startsWith("https://")) return NextResponse.json({ error: "主图无效。" }, { status: 400 });
     update.image_url = primaryImage;
   }
   if (colorImages !== undefined) {
-    if (!colorImages || typeof colorImages !== "object" || Array.isArray(colorImages) || Object.entries(colorImages).some(([color, image]) => !color.trim() || typeof image !== "string" || !image.startsWith("https://"))) return NextResponse.json({ error: "Las imágenes por color no son válidas." }, { status: 400 });
+    if (!colorImages || typeof colorImages !== "object" || Array.isArray(colorImages) || Object.entries(colorImages).some(([color, image]) => !color.trim() || typeof image !== "string" || !image.startsWith("https://"))) return NextResponse.json({ error: "颜色图片无效。" }, { status: 400 });
     update.color_images = colorImages;
   }
   if (colorPrices !== undefined) {
-    if (!colorPrices || typeof colorPrices !== "object" || Array.isArray(colorPrices) || Object.entries(colorPrices).some(([color, value]) => !color.trim() || typeof value !== "number" || !Number.isFinite(value) || value <= 0)) return NextResponse.json({ error: "Los precios por color no son válidos." }, { status: 400 });
+    if (!colorPrices || typeof colorPrices !== "object" || Array.isArray(colorPrices) || Object.entries(colorPrices).some(([color, value]) => !color.trim() || typeof value !== "number" || !Number.isFinite(value) || value <= 0)) return NextResponse.json({ error: "颜色价格无效。" }, { status: 400 });
     update.color_prices = colorPrices;
   }
   if (shortDescription !== undefined) update.short_description = shortDescription.trim();
   if (description !== undefined) update.description = description.trim();
   if (translations !== undefined) {
     const normalizedTranslations = normalizeProductTranslations(translations);
-    if (!normalizedTranslations) return NextResponse.json({ error: "Las traducciones del producto no son válidas." }, { status: 400 });
+    if (!normalizedTranslations) return NextResponse.json({ error: "商品译文无效。" }, { status: 400 });
     update.translations = normalizedTranslations;
   }
   if (dimensions !== undefined) update.dimensions = dimensions.trim();
   if (materials !== undefined) {
-    if (!Array.isArray(materials) || materials.some((item) => typeof item !== "string")) return NextResponse.json({ error: "Los materiales no son válidos." }, { status: 400 });
+    if (!Array.isArray(materials) || materials.some((item) => typeof item !== "string")) return NextResponse.json({ error: "材质无效。" }, { status: 400 });
     update.materials = materials.map((item) => item.trim()).filter(Boolean);
   }
   if (colors !== undefined) {
-    if (!Array.isArray(colors) || colors.some((item) => typeof item !== "string")) return NextResponse.json({ error: "Los colores no son válidos." }, { status: 400 });
+    if (!Array.isArray(colors) || colors.some((item) => typeof item !== "string")) return NextResponse.json({ error: "颜色无效。" }, { status: 400 });
     update.colors = colors.map((item) => item.trim()).filter(Boolean);
   }
   if (sizes !== undefined) {
-    if (!Array.isArray(sizes) || sizes.some((size) => typeof size !== "string" || !size.trim() || size.trim().length > 30)) return NextResponse.json({ error: "Las tallas no son válidas." }, { status: 400 });
+    if (!Array.isArray(sizes) || sizes.some((size) => typeof size !== "string" || !size.trim() || size.trim().length > 30)) return NextResponse.json({ error: "尺码选项无效。" }, { status: 400 });
     update.size_options = [...new Set(sizes.map((size) => size.trim()))];
   }
-  if (Object.keys(update).length === 0) return NextResponse.json({ error: "No hay cambios para guardar." }, { status: 400 });
+  if (Object.keys(update).length === 0) return NextResponse.json({ error: "没有可保存的修改。" }, { status: 400 });
   const { data, error } = await supabase.from("products").update(update).eq("id", id).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images").single();
-  if (error) return NextResponse.json({ error: "No se pudo actualizar el producto." }, { status: 500 });
+  if (error) return NextResponse.json({ error: "商品更新失败。" }, { status: 500 });
   void recordAdminAction(supabase, adminEmail, "updated", "product", id, update);
   return NextResponse.json({ item: data });
 }
 
 export async function DELETE(request: Request) {
   const authorized = await authorizedClient(request);
-  if (!authorized) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!authorized) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
   const resource = url.searchParams.get("resource");
   if (resource === "coupons") {
-    if (!id || !hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "Cupón no válido." }, { status: 400 });
+    if (!id || !hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "优惠码无效。" }, { status: 400 });
     const { error } = await supabase.from("promo_codes").delete().eq("id", id);
-    if (error) return NextResponse.json({ error: "No se pudo eliminar el cupón." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "优惠码删除失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "deleted", "coupon", id);
     return NextResponse.json({ ok: true });
   }
   if (resource === "categories") {
-    if (!id || !hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "Categoría no válida." }, { status: 400 });
+    if (!id || !hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "分类无效。" }, { status: 400 });
     const { data: category, error: categoryError } = await supabase.from("categories").select("id, slug, name").eq("id", id).maybeSingle();
-    if (categoryError || !category) return NextResponse.json({ error: "Categoría no encontrada." }, { status: 404 });
+    if (categoryError || !category) return NextResponse.json({ error: "未找到该分类。" }, { status: 404 });
     const { count, error: usageError } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("category", category.slug);
-    if (usageError) return NextResponse.json({ error: "No se pudo comprobar el uso de la categoría." }, { status: 500 });
-    if (count) return NextResponse.json({ error: "Esta categoría tiene productos asignados. Reasígnalos antes de eliminarla." }, { status: 409 });
+    if (usageError) return NextResponse.json({ error: "无法检查分类下的商品。" }, { status: 500 });
+    if (count) return NextResponse.json({ error: "该分类下仍有商品，请先调整商品分类后再删除。" }, { status: 409 });
     const { error } = await supabase.from("categories").delete().eq("id", id);
-    if (error) return NextResponse.json({ error: "No se pudo eliminar la categoría." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "分类删除失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "deleted", "category", id, { name: category.name, slug: category.slug });
     return NextResponse.json({ ok: true });
   }
-  if (!id) return NextResponse.json({ error: "Producto inválido." }, { status: 400 });
-  if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  if (!id) return NextResponse.json({ error: "商品无效。" }, { status: 400 });
+  if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
   const { count, error: lookupError } = await supabase.from("order_items").select("id", { count: "exact", head: true }).eq("product_id", id);
-  if (lookupError) return NextResponse.json({ error: "No se pudo comprobar el historial de pedidos." }, { status: 500 });
-  if (count) return NextResponse.json({ error: "Este producto ya tiene pedidos y debe permanecer como borrador." }, { status: 409 });
+  if (lookupError) return NextResponse.json({ error: "无法检查商品的下单记录。" }, { status: 500 });
+  if (count) return NextResponse.json({ error: "该商品已有下单记录，只能下架不能删除。" }, { status: 409 });
   const { error } = await supabase.from("products").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: "No se pudo eliminar el producto." }, { status: 500 });
+  if (error) return NextResponse.json({ error: "商品删除失败。" }, { status: 500 });
   void recordAdminAction(supabase, adminEmail, "deleted", "product", id);
   return NextResponse.json({ ok: true });
 }

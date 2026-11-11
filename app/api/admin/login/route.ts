@@ -10,8 +10,8 @@ export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!email || !password) return NextResponse.json({ error: "Email y contraseña son requeridos." }, { status: 400 });
-  if (!supabaseUrl || !supabaseAnonKey) return NextResponse.json({ error: "La autenticación no está configurada." }, { status: 503 });
+  if (!email || !password) return NextResponse.json({ error: "请输入邮箱和密码。" }, { status: 400 });
+  if (!supabaseUrl || !supabaseAnonKey) return NextResponse.json({ error: "身份验证服务未配置。" }, { status: 503 });
 
   const cookiesToSet: { name: string; value: string; options: Parameters<NextResponse["cookies"]["set"]>[2] }[] = [];
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user || !await getAdminRole(data.user.id)) {
     if (data.session) await supabase.auth.signOut();
-    return NextResponse.json({ error: "No tienes permisos para acceder al panel." }, { status: 403 });
+    return NextResponse.json({ error: "该账号没有后台访问权限。" }, { status: 403 });
   }
 
   const response = NextResponse.json({ ok: true });

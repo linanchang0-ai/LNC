@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/admin-data";
+import { orderStatusLabel, stockStatusLabel } from "@/lib/admin-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export default function AdminHomePage() {
                 <tr>
                   <th>订单</th>
                   <th>客户</th>
-                  <th>Total</th>
+                  <th>总额</th>
                   <th>状态</th>
                 </tr>
               </thead>
@@ -81,7 +82,7 @@ export default function AdminHomePage() {
                     <td>{order.order_number}</td>
                     <td>{order.customer_name ?? "客户"}</td>
                     <td>{formatPrice(order.total)}</td>
-                    <td><span className="status-pill status-pill--neutral">{order.order_status ?? "待处理"}</span></td>
+                    <td><span className="status-pill status-pill--neutral">{orderStatusLabel(order.order_status)}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -104,7 +105,7 @@ export default function AdminHomePage() {
                 {state.products.filter((product) => product.featured).slice(0, 4).map((product) => (
                   <tr key={product.id}>
                     <td>{product.name}</td>
-                    <td>{product.stock}</td>
+                    <td>{stockStatusLabel(product.stock)}</td>
                     <td>{formatPrice(product.price)}</td>
                   </tr>
                 ))}

@@ -27,7 +27,7 @@ export function PageBackButton() {
   const router = useRouter();
 
   const hasExistingBackLink = pagesWithExistingBackLink.has(pathname) || pathname.startsWith("/account/orders/");
-  if (pathname === "/" || pathname === "/admin" || hasExistingBackLink || pathname.startsWith("/products/")) return null;
+  if (pathname === "/" || pathname.startsWith("/admin") || hasExistingBackLink || pathname.startsWith("/products/")) return null;
 
   const handleBack = () => {
     const referrer = document.referrer;

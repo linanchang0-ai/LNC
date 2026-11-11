@@ -26,7 +26,7 @@ async function authorizedSupabase(request: Request) {
 
 export async function GET(request: Request) {
   const supabase = await authorizedSupabase(request);
-  if (!supabase) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!supabase) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const [{ data, error }, { data: settings, error: settingsError }] = await Promise.all([
     supabase.from("homepage_slides").select("id, image_path, image_url, alt_text, href, sort_order, is_active, created_at").order("sort_order").order("created_at"),
     supabase.from("homepage_carousel_settings").select("interval_seconds").eq("id", "default").maybeSingle(),
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const supabase = await authorizedSupabase(request);
-  if (!supabase) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!supabase) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
 
   const formData = await request.formData();
   const image = formData.get("image");
@@ -68,12 +68,12 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const supabase = await authorizedSupabase(request);
-  if (!supabase) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!supabase) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   let body: { id?: string; altText?: string; href?: string | null; sortOrder?: number; isActive?: boolean; intervalSeconds?: number };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "La solicitud no es válida." }, { status: 400 });
+    return NextResponse.json({ error: "请求数据无效。" }, { status: 400 });
   }
   if (body.intervalSeconds !== undefined) {
     if (!Number.isInteger(body.intervalSeconds) || body.intervalSeconds < 1 || body.intervalSeconds > 60) {
@@ -114,12 +114,12 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const supabase = await authorizedSupabase(request);
-  if (!supabase) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!supabase) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   let body: { id?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "La solicitud no es válida。" }, { status: 400 });
+    return NextResponse.json({ error: "请求数据无效。" }, { status: 400 });
   }
   if (!body.id) return NextResponse.json({ error: "轮播图 ID 无效。" }, { status: 400 });
 

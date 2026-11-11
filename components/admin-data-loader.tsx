@@ -12,11 +12,11 @@ export function useAdminResource<T>(resource: string) {
     try {
       const response = await fetch(`/api/admin?resource=${resource}`);
       const data = await response.json() as { items?: T[]; error?: string };
-      if (!response.ok) throw new Error(data.error ?? "No se pudieron cargar los datos.");
+      if (!response.ok) throw new Error(data.error ?? "数据加载失败。");
       setItems(data.items ?? []);
       setError("");
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los datos.");
+      setError(loadError instanceof Error ? loadError.message : "数据加载失败。");
     } finally {
       setLoading(false);
     }
@@ -28,13 +28,13 @@ export function useAdminResource<T>(resource: string) {
       try {
         const response = await fetch(`/api/admin?resource=${resource}`);
         const data = await response.json() as { items?: T[]; error?: string };
-        if (!response.ok) throw new Error(data.error ?? "No se pudieron cargar los datos.");
+        if (!response.ok) throw new Error(data.error ?? "数据加载失败。");
         if (!cancelled) {
           setItems(data.items ?? []);
           setError("");
         }
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los datos.");
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "数据加载失败。");
       } finally {
         if (!cancelled) setLoading(false);
       }

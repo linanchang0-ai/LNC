@@ -18,7 +18,7 @@ async function authorized(request: Request) {
 
 export async function POST(request: Request) {
   const context = await authorized(request);
-  if (!context) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!context) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail } = context;
 
   const formData = await request.formData();
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const context = await authorized(request);
-  if (!context) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  if (!context) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail } = context;
   const orderId = new URL(request.url).searchParams.get("orderId");
   if (!orderId) return NextResponse.json({ error: "订单无效。" }, { status: 400 });

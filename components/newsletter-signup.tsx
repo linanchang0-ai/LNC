@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { usePathname } from "next/navigation";
 import { useI18n } from "@/components/locale-provider";
+import { translateText } from "@/lib/i18n";
 
 export function NewsletterSignup({ compact = false }: { compact?: boolean }) {
-  const { t } = useI18n();
+  const { locale: selectedLocale } = useI18n();
+  const pathname = usePathname();
+  const locale = pathname?.startsWith("/admin") ? "zh" : selectedLocale;
+  const t = (text: string) => translateText(locale, text);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);

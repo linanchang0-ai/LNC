@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdminResource } from "@/components/admin-data-loader";
+import { returnStatusLabel } from "@/lib/admin-labels";
 import { useState } from "react";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ export default function AdminReturnsPage() {
                   <td>{returnItem.id.slice(0, 8)}</td>
                   <td>{returnItem.orders?.customer_name ?? returnItem.orders?.guest_email ?? "-"}</td>
                   <td>{returnItem.reason ?? "-"}</td>
-                  <td><span className="status-pill">{returnItem.status ?? "审核中"}</span></td>
+                  <td><span className="status-pill">{returnStatusLabel(returnItem.status)}</span></td>
                   <td>{returnItem.orders?.order_number ?? returnItem.order_id.slice(0, 8)}</td>
                   <td>{returnItem.status === "Recibida" ? <>{returnItem.restock_approved ? "已恢复库存" : "不恢复库存"}{returnItem.inspection_notes ? <><br />{returnItem.inspection_notes}</> : null}</> : "-"}</td>
                   <td><select value={returnItem.status ?? "Solicitud de devolución"} onChange={(event) => updateStatus(returnItem.id, event.target.value)} disabled={updatingId === returnItem.id} aria-label="退货状态"><option value="Solicitud de devolución">退货申请</option><option value="En revisión">审核中</option><option value="Aprobada">已批准</option><option value="Rechazada">已拒绝</option><option value="Recibida">已收到</option><option value="Cerrada">已关闭</option></select></td>
