@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/admin-data";
 import { orderStatusLabel, stockStatusLabel } from "@/lib/admin-labels";
@@ -37,30 +38,30 @@ export default function AdminHomePage() {
       </div>
 
       <div className="admin-stats">
-        <div className="stats-card">
+        <Link className="stats-card" href="/admin/reports/revenue">
           <span>营业额</span>
           <strong>{formatPrice(totalRevenue)}</strong>
-        </div>
-        <div className="stats-card">
+        </Link>
+        <Link className="stats-card" href="/admin/orders?status=Pending">
           <span>待处理订单</span>
           <strong>{pendingOrders}</strong>
-        </div>
-        <div className="stats-card">
+        </Link>
+        <Link className="stats-card" href="/admin/customers">
           <span>客户数量</span>
           <strong>{state.customerCount}</strong>
-        </div>
-        <div className="stats-card">
+        </Link>
+        <Link className="stats-card" href="/admin/refunds">
           <span>退款金额</span>
           <strong>{formatPrice(totalRefunds)}</strong>
-        </div>
-        <div className="stats-card">
+        </Link>
+        <Link className="stats-card" href="/admin/reports/low-stock">
           <span>低库存商品</span>
           <strong>{lowStockProducts.length}</strong>
-        </div>
-        <div className="stats-card">
+        </Link>
+        <Link className="stats-card" href="/admin/reports/sales-30d">
           <span>近 30 天销售额</span>
           <strong>{formatPrice(recentPaidOrders.reduce((sum, order) => sum + order.total, 0))}</strong>
-        </div>
+        </Link>
       </div>
 
       <div className="admin-panels">

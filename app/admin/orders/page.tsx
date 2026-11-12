@@ -1,6 +1,6 @@
 "use client";
 
-import { formatPrice } from "@/lib/admin-data";
+import { formatPrice, formatDateYMD } from "@/lib/admin-data";
 import { refundStatusLabel, returnStatusLabel } from "@/lib/admin-labels";
 import { useAdminResource } from "@/components/admin-data-loader";
 import { useState } from "react";
@@ -27,12 +27,21 @@ export default function AdminOrdersPage() {
   const [labelBusy, setLabelBusy] = useState(false);
   const [labelError, setLabelError] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
+  const [statusFilter, setStatusFilter] = useState(() => {
+    if (typeof window === "undefined") return "Todos";
+    const query = new URLSearchParams(window.location.search).get("status");
+    return query ?? "Todos";
+  });
 
   const visibleOrders = orders.filter((order) => {
     const query = search.trim().toLowerCase();
     const matchesSearch = !query || [order.order_number, order.customer_name, order.guest_email, order.tracking_number].some((value) => value?.toLowerCase().includes(query));
-    return matchesSearch && (statusFilter === "Todos" || order.order_status === statusFilter);
+    const matchesStatus = statusFilter === "Todos"
+      ? true
+      : statusFilter === "Pending"
+        ? ["Pendiente", "Procesando"].includes(order.order_status ?? "") && order.payment_status === "Pagado"
+        : order.order_status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const exportOrders = () => {
@@ -195,7 +204,7 @@ export default function AdminOrdersPage() {
       <div className="admin-panel">
         <div className="form-grid" style={{ marginBottom: 18 }}>
           <label>搜索订单、客户、邮箱或物流单号<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索" /></label>
-          <label>状态<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="Todos">全部</option><option value="Pendiente">待处理</option><option value="Procesando">处理中</option><option value="Enviado">已发货</option><option value="Entregado">已送达</option><option value="Cancelado">已取消</option></select></label>
+          <label>状态<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="Todos">全部</option><option value="Pending">待处理（含处理中）</option><option value="Pendiente">待处理</option><option value="Procesando">处理中</option><option value="Enviado">已发货</option><option value="Entregado">已送达</option><option value="Cancelado">已取消</option></select></label>
         </div>
         <button className="small-button" onClick={exportOrders} disabled={!visibleOrders.length}>导出订单汇总</button>
         <button className="small-button" onClick={() => void exportOrderDetails()} disabled={!orders.length}>导出订单明细</button>
@@ -221,7 +230,7 @@ export default function AdminOrdersPage() {
                   <td>{order.guest_email ?? "-"}</td>
                   <td>{formatPrice(order.total)}</td>
                   <td>{editingId === order.id ? <select value={fulfillment.status} onChange={(event) => setFulfillment({ ...fulfillment, status: event.target.value })} aria-label="订单状态"><option value="Pendiente">待处理</option><option value="Procesando">处理中</option><option value="Enviado">已发货</option><option value="Entregado">已送达</option><option value="Cancelado">已取消</option></select> : <span className="status-pill">{orderStatusLabel(order.order_status)}</span>}</td>
-                  <td>{new Date(order.created_at).toLocaleDateString("zh-CN")}</td>
+                  <td>{formatDateYMD(order.created_at)}</td>
                   <td>{editingId === order.id ? <><input value={fulfillment.carrier} onChange={(event) => setFulfillment({ ...fulfillment, carrier: event.target.value })} placeholder="物流公司" aria-label="物流公司" /><input value={fulfillment.trackingNumber} onChange={(event) => setFulfillment({ ...fulfillment, trackingNumber: event.target.value })} placeholder="物流单号" aria-label="物流单号" /></> : order.tracking_number ? <>{order.shipping_carrier ?? "物流公司"}<br />{order.tracking_number}</> : "未填写"}</td>
                   <td>{editingId === order.id ? <><button className="small-button" onClick={() => saveFulfillment(order.id)} disabled={savingFulfillment}>{savingFulfillment ? "正在保存" : "保存物流"}</button><button className="small-button" onClick={() => setEditingId(null)} disabled={savingFulfillment}>取消</button></> : <><button className="small-button" onClick={() => void loadDetail(order.id)}>查看详情</button><button className="small-button" onClick={() => beginFulfillment(order)}>管理物流</button><button className="small-button" onClick={() => void loadDetail(order.id)}>上传面单</button>{order.payment_status === "Pagado" && order.paypal_capture_id ? <button className="small-button" onClick={() => refundOrder(order)}>退款</button> : null}</>}</td>
                 </tr>

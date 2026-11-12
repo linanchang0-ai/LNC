@@ -170,6 +170,17 @@ button {
   font-size: clamp(1.3rem, 2vw, 2rem);
 }
 
+a.stats-card {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+a.stats-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
 .admin-panels {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

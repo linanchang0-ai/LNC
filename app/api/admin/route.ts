@@ -40,6 +40,7 @@ export async function GET(request: Request) {
     products: ["admin", "operations"],
     orders: ["admin", "operations", "warehouse", "finance"],
     "order-report": ["admin", "operations", "warehouse", "finance"],
+    "sales-report": ["admin", "operations", "finance"],
     returns: ["admin", "operations", "support", "warehouse"],
     refunds: ["admin", "finance"],
     audit: ["admin"],
@@ -86,6 +87,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ items: data ?? [] });
   }
 
+  if (resource === "sales-report") {
+    const { data, error } = await supabase.from("orders").select("order_number, customer_name, guest_email, total, currency, order_status, payment_status, created_at").order("created_at", { ascending: false });
+    if (error) return NextResponse.json({ error: "销售报表加载失败。" }, { status: 500 });
+    return NextResponse.json({ items: data ?? [] });
+  }
+
   if (resource === "products") {
     const fields = "id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images_by_color, created_at";
     const fallbackFields = [
@@ -110,20 +117,21 @@ export async function GET(request: Request) {
   const queries = {
     orders: () => supabase.from("orders").select("id, order_number, customer_name, guest_email, phone, shipping_address, total, order_status, payment_status, paypal_capture_id, tracking_number, shipping_carrier, shipped_at, created_at").order("created_at", { ascending: false }),
     returns: () => supabase.from("returns").select("id, order_id, reason, status, inspection_notes, restock_approved, created_at, orders(customer_name, guest_email, order_number)").order("created_at", { ascending: false }),
-    refunds: () => supabase.from("refunds").select("id, order_id, refund_amount, refund_status, refund_reason, created_at, orders(customer_name, guest_email, order_number)").order("created_at", { ascending: false }),
+    refunds: () => supabase.from("refunds").select("id, order_id, refund_amount, refund_status, refund_reason, refund_date, created_at, orders(customer_name, guest_email, order_number)").order("created_at", { ascending: false }),
     audit: () => supabase.from("admin_audit_logs").select("id, admin_email, action, resource_type, resource_id, details, created_at").order("created_at", { ascending: false }).limit(200),
     messages: () => supabase.from("contact_messages").select("id, name, email, message, status, reply, replied_at, replied_by, created_at, resolved_at").order("created_at", { ascending: false }).limit(200),
     coupons: () => supabase.from("promo_codes").select("id, code, discount_type, discount_value, minimum_subtotal, starts_at, expires_at, max_uses, uses_count, is_active, created_at").order("created_at", { ascending: false }),
   } as const;
 
   if (resource === "customers") {
-    const { data, error } = await supabase.from("orders").select("guest_email, customer_name, total, shipping_address, payment_status").eq("payment_status", "Pagado").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("orders").select("guest_email, customer_name, total, shipping_address, payment_status, created_at").eq("payment_status", "Pagado").order("created_at", { ascending: false });
     if (error) return NextResponse.json({ error: "客户数据加载失败。" }, { status: 500 });
-    const customers = Object.values((data ?? []).reduce<Record<string, { email: string; name: string; city: string; orders: number; totalSpent: number }>>((result, order) => {
+    const customers = Object.values((data ?? []).reduce<Record<string, { email: string; name: string; city: string; orders: number; totalSpent: number; registeredAt: string | null }>>((result, order) => {
       const email = order.guest_email ?? "无邮箱";
-      const current = result[email] ?? { email, name: order.customer_name ?? "客户", city: (order.shipping_address as { city?: string } | null)?.city ?? "-", orders: 0, totalSpent: 0 };
+      const current = result[email] ?? { email, name: order.customer_name ?? "客户", city: (order.shipping_address as { city?: string } | null)?.city ?? "-", orders: 0, totalSpent: 0, registeredAt: order.created_at ?? null };
       current.orders += 1;
       current.totalSpent += Number(order.total ?? 0);
+      if (order.created_at && (!current.registeredAt || new Date(order.created_at).getTime() < new Date(current.registeredAt).getTime())) current.registeredAt = order.created_at;
       result[email] = current;
       return result;
     }, {}));

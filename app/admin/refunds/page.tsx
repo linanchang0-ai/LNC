@@ -1,13 +1,13 @@
 "use client";
 
-import { formatPrice } from "@/lib/admin-data";
+import { formatPrice, formatDateYMD } from "@/lib/admin-data";
 import { refundStatusLabel } from "@/lib/admin-labels";
 import { useAdminResource } from "@/components/admin-data-loader";
 
 export const dynamic = "force-dynamic";
 
 export default function AdminRefundsPage() {
-  const { items: refunds, loading, error } = useAdminResource<{ id: string; order_id: string; refund_amount: number; refund_status: string | null; refund_reason: string | null; orders: { customer_name: string | null; guest_email: string | null; order_number: string | null } | null }>("refunds");
+  const { items: refunds, loading, error } = useAdminResource<{ id: string; order_id: string; refund_amount: number; refund_status: string | null; refund_reason: string | null; refund_date: string | null; created_at: string; orders: { customer_name: string | null; guest_email: string | null; order_number: string | null } | null }>("refunds");
 
   return (
     <div>
@@ -27,6 +27,7 @@ export default function AdminRefundsPage() {
                 <th>状态</th>
                 <th>订单</th>
                 <th>原因</th>
+                <th>退款时间</th>
               </tr>
             </thead>
             <tbody>
@@ -38,9 +39,10 @@ export default function AdminRefundsPage() {
                   <td><span className="status-pill">{refundStatusLabel(refund.refund_status)}</span></td>
                   <td>{refund.orders?.order_number ?? refund.order_id.slice(0, 8)}</td>
                   <td>{refund.refund_reason ?? "-"}</td>
+                  <td>{formatDateYMD(refund.refund_date ?? refund.created_at)}</td>
                 </tr>
               ))}
-              {!loading && refunds.length === 0 ? <tr><td colSpan={6}>暂无退款记录。</td></tr> : null}
+              {!loading && refunds.length === 0 ? <tr><td colSpan={7}>暂无退款记录。</td></tr> : null}
             </tbody>
           </table>
         </div>
