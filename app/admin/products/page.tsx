@@ -4,6 +4,7 @@ import { formatPrice } from "@/lib/admin-data";
 import { useAdminResource } from "@/components/admin-data-loader";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { normalizeProductTranslations, type ProductTranslationLocale, type ProductTranslationTextField, type ProductTranslations } from "@/lib/product-translations";
+import { translateText } from "@/lib/i18n";
 import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from "react";
 
 export const dynamic = "force-dynamic";
@@ -138,11 +139,16 @@ export default function AdminProductsPage() {
       if (dialog.open) dialog.close();
     };
   }, [editorOpen]);
-  const productGroups = Array.from(new Set(products.map((product) => product.category || "uncategorized"))).map((categorySlug) => ({
-    slug: categorySlug,
-    name: categories.find((category) => category.slug === categorySlug)?.name ?? (categorySlug === "uncategorized" ? "未分类" : categorySlug),
-    products: products.filter((product) => (product.category || "uncategorized") === categorySlug),
-  }));
+  const productGroups = Array.from(new Set(products.map((product) => product.category || "uncategorized"))).map((categorySlug) => {
+    const resolvedName = categories.find((category) => category.slug === categorySlug)?.name;
+    return {
+      slug: categorySlug,
+      name: resolvedName ? translateText("zh", resolvedName) : (categorySlug === "uncategorized" ? "未分类" : categorySlug),
+      products: products.filter((product) => (product.category || "uncategorized") === categorySlug),
+    };
+  });
+  const categoryNameBySlug = (slug: string | null | undefined) => categories.find((category) => category.slug === slug)?.name;
+  const categoryLabel = (name: string | null | undefined) => name ? translateText("zh", name) : "未分类";
   const isProductCategoryExpanded = (categorySlug: string) => expandedProductCategories.includes(categorySlug);
   const toggleProductCategory = (categorySlug: string) => {
     setExpandedProductCategories((current) => current.includes(categorySlug) ? current.filter((slug) => slug !== categorySlug) : [...current, categorySlug]);
@@ -375,7 +381,7 @@ export default function AdminProductsPage() {
   };
 
   const deleteCategory = async (category: AdminCategory) => {
-    if (!window.confirm(`确定要删除分类“${category.name}”吗？`)) return;
+    if (!window.confirm(`确定要删除分类“${categoryLabel(category.name)}”吗？`)) return;
     setSaveError("");
     const response = await fetch(`/api/admin?resource=categories&id=${encodeURIComponent(category.id)}`, { method: "DELETE" });
     const data = await response.json() as { error?: string };
@@ -427,7 +433,7 @@ export default function AdminProductsPage() {
             <button className="small-button category-create-button" type="button" onClick={() => void createCategory()} disabled={categorySaving || !newCategoryName.trim()}>{categorySaving ? "正在保存..." : "添加分类"}</button>
           </div>
           <div className="filter-bar" aria-label="已有商品分类">
-            {categories.map((category) => <span className="filter-chip" key={category.id}>{category.name} <button type="button" onClick={() => void deleteCategory(category)} aria-label={`删除 ${category.name}`}>×</button></span>)}
+            {categories.map((category) => <span className="filter-chip" key={category.id}>{categoryLabel(category.name)} <button type="button" onClick={() => void deleteCategory(category)} aria-label={`删除 ${categoryLabel(category.name)}`}>×</button></span>)}
           </div>
           {categoriesError ? <p className="error-box">{categoriesError}</p> : null}
         </div> : null}
@@ -448,7 +454,7 @@ export default function AdminProductsPage() {
                 <tr key={product.id}>
                   <td><div>{product.name}</div><button className="small-button" type="button" style={{ marginTop: 8 }} onClick={() => beginEditing(product)}>编辑</button></td>
                   <td>{product.image_url ? <img className="admin-product-thumb" src={product.image_url} alt="" /> : "暂无图片"}</td>
-                  <td>{product.category}</td>
+                  <td>{categoryLabel(categoryNameBySlug(product.category))}</td>
                   <td>{formatPrice(product.price)}</td>
                   <td>{product.inventory_quantity === 0 ? "已售罄" : (product.inventory_quantity ?? 0) <= 5 ? "库存不足" : "有库存"}</td>
                   <td>{product.inventory_quantity ?? 0}</td>
@@ -471,7 +477,7 @@ export default function AdminProductsPage() {
                 {product.image_url ? <img src={product.image_url} alt="" /> : <div className="mobile-admin-product-placeholder">暂无图片</div>}
                 <div>
                   <strong>{product.name}</strong>
-                  <span>{product.category}</span>
+                  <span>{categoryLabel(categoryNameBySlug(product.category))}</span>
                   <span className="status-pill">{product.is_published ? "已发布" : "草稿"}</span>
                 </div>
                 </div>
@@ -558,7 +564,7 @@ export default function AdminProductsPage() {
             <div className="field"><label>尺寸描述（英语）</label><input value={draft.translations.en?.dimensions ?? ""} onChange={(event) => updateTranslationText("en", "dimensions", event.target.value)} /></div>
             <div className="field"><label>尺寸描述（简体中文）</label><input value={draft.translations.zh?.dimensions ?? ""} onChange={(event) => updateTranslationText("zh", "dimensions", event.target.value)} /></div>
           </div>
-          <div className="field-row two-col"><div className="field"><label>商品分类</label><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}><option value="">请选择</option>{categories.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}</select></div><div className="field"><label>商品价格（MXN）</label><input type="number" min="0.01" step="0.01" value={draft.price} onChange={(event) => setDraft({ ...draft, price: event.target.value })} /></div></div>
+          <div className="field-row two-col"><div className="field"><label>商品分类</label><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}><option value="">请选择</option>{categories.map((category) => <option key={category.slug} value={category.slug}>{categoryLabel(category.name)}</option>)}</select></div><div className="field"><label>商品价格（MXN）</label><input type="number" min="0.01" step="0.01" value={draft.price} onChange={(event) => setDraft({ ...draft, price: event.target.value })} /></div></div>
           <div className="field"><label>可售库存</label><input type="number" min="0" step="1" value={draft.inventoryQuantity} onChange={(event) => setDraft({ ...draft, inventoryQuantity: event.target.value })} /></div>
           <div className="field"><label>简短描述</label><input value={draft.shortDescription} onChange={(event) => setDraft({ ...draft, shortDescription: event.target.value })} /></div>
           <div className="field"><label>详细描述</label><textarea rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></div>
