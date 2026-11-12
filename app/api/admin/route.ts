@@ -124,7 +124,7 @@ export async function GET(request: Request) {
   } as const;
 
   if (resource === "customers") {
-    const { data, error } = await supabase.from("orders").select("guest_email, customer_name, total, shipping_address, payment_status, created_at").eq("payment_status", "Pagado").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("orders").select("guest_email, customer_name, total, shipping_address, payment_status, created_at").order("created_at", { ascending: false });
     if (error) return NextResponse.json({ error: "客户数据加载失败。" }, { status: 500 });
     const customers = Object.values((data ?? []).reduce<Record<string, { email: string; name: string; city: string; orders: number; totalSpent: number; registeredAt: string | null }>>((result, order) => {
       const email = order.guest_email ?? "无邮箱";

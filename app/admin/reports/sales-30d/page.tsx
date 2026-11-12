@@ -94,7 +94,6 @@ export default function Sales30dReportPage() {
                   <td>{formatPrice(day.total)}</td>
                 </tr>
               ))}
-              {!loading && totalCount === 0 ? <tr><td colSpan={3}>近 30 天没有已支付订单。</td></tr> : null}
             </tbody>
           </table>
         </div>
