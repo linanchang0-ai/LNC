@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   }
 
   if (resource === "products") {
-    const fields = "id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images, detail_images_by_color, created_at";
+    const fields = "id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images_by_color, created_at";
     const fallbackFields = [
       fields.replace(", detail_images_by_color", ""),
       fields.replace(", color_prices", ""),
@@ -181,13 +181,13 @@ export async function POST(request: Request) {
   const authorized = await authorizedClient(request);
   if (!authorized) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
-  let body: { name?: string; nameZh?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; detailImagesByColor?: Record<string, string[]>; resource?: string; code?: string; discountType?: "percentage" | "fixed"; discountValue?: number; minimumSubtotal?: number; expiresAt?: string; maxUses?: number | null };
+  let body: { name?: string; nameZh?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImagesByColor?: Record<string, string[]>; resource?: string; code?: string; discountType?: "percentage" | "fixed"; discountValue?: number; minimumSubtotal?: number; expiresAt?: string; maxUses?: number | null };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "请求数据无效。" }, { status: 400 });
   }
-  const { name, nameZh, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, detailImagesByColor, resource, code, discountType, discountValue, minimumSubtotal, expiresAt, maxUses } = body;
+  const { name, nameZh, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImagesByColor, resource, code, discountType, discountValue, minimumSubtotal, expiresAt, maxUses } = body;
   if (resource === "categories") {
     if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
     const categoryName = name?.trim() ?? "";
@@ -244,13 +244,12 @@ export async function POST(request: Request) {
     colors: Array.isArray(colors) ? colors.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim()) : [],
     size_options: sizeOptions,
     gallery: Array.isArray(gallery) ? gallery : [],
-    detail_images: Array.isArray(detailImages) ? detailImages : [],
     detail_images_by_color: normalizeDetailByColor(detailImagesByColor),
     color_images: colorImages ?? {},
     ...(colorPrices === undefined ? {} : { color_prices: colorPrices }),
   };
   const configuredColorPrices = content.color_prices ?? {};
-  if ((detailImagesByColor !== undefined && !isValidDetailByColor(detailImagesByColor)) || (primaryImage !== undefined && primaryImage !== "" && !primaryImage.startsWith("https://")) || content.gallery.some((image) => !image.startsWith("https://")) || content.detail_images.some((image) => !image.startsWith("https://")) || Object.values(content.color_images).some((image) => typeof image !== "string" || !image.startsWith("https://")) || Object.entries(configuredColorPrices).some(([color, value]) => !color.trim() || typeof value !== "number" || !Number.isFinite(value) || value <= 0)) return NextResponse.json({ error: "商品数据无效。" }, { status: 400 });
+  if ((detailImagesByColor !== undefined && !isValidDetailByColor(detailImagesByColor)) || (primaryImage !== undefined && primaryImage !== "" && !primaryImage.startsWith("https://")) || content.gallery.some((image) => !image.startsWith("https://")) || Object.values(content.color_images).some((image) => typeof image !== "string" || !image.startsWith("https://")) || Object.entries(configuredColorPrices).some(([color, value]) => !color.trim() || typeof value !== "number" || !Number.isFinite(value) || value <= 0)) return NextResponse.json({ error: "商品数据无效。" }, { status: 400 });
   const { data, error } = await supabase.from("products").insert({
     slug,
     name: cleanName,
@@ -262,7 +261,7 @@ export async function POST(request: Request) {
     ...content,
     image_url: primaryImage ?? "",
     is_published: false,
-  }).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images, detail_images_by_color").single();
+  }).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images_by_color").single();
   if (error) return NextResponse.json({ error: error.code === "23505" ? "已存在同名商品。" : "商品创建失败。" }, { status: 500 });
   void recordAdminAction(supabase, adminEmail, "created", "product", data.id, { name: data.name, isPublished: data.is_published });
   return NextResponse.json({ item: data }, { status: 201 });
@@ -272,13 +271,13 @@ export async function PATCH(request: Request) {
   const authorized = await authorizedClient(request);
   if (!authorized) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
-  let body: { id?: string; featured?: boolean; isPublished?: boolean; name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; detailImagesByColor?: Record<string, string[]>; resource?: string; status?: string; trackingNumber?: string; shippingCarrier?: string; restockApproved?: boolean; inspectionNotes?: string; reply?: string; isActive?: boolean };
+  let body: { id?: string; featured?: boolean; isPublished?: boolean; name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImagesByColor?: Record<string, string[]>; resource?: string; status?: string; trackingNumber?: string; shippingCarrier?: string; restockApproved?: boolean; inspectionNotes?: string; reply?: string; isActive?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "请求数据无效。" }, { status: 400 });
   }
-  const { id, featured, isPublished, name, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, detailImagesByColor, resource, status, trackingNumber, shippingCarrier, restockApproved, inspectionNotes, reply, isActive } = body;
+  const { id, featured, isPublished, name, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImagesByColor, resource, status, trackingNumber, shippingCarrier, restockApproved, inspectionNotes, reply, isActive } = body;
   if (resource === "coupons") {
     if (!id || !hasRole(role, ["admin", "operations"]) || typeof isActive !== "boolean") return NextResponse.json({ error: "优惠码无效。" }, { status: 400 });
     const { data, error } = await supabase.from("promo_codes").update({ is_active: isActive }).eq("id", id).select("id, code, discount_type, discount_value, minimum_subtotal, starts_at, expires_at, max_uses, uses_count, is_active, created_at").single();
@@ -337,7 +336,7 @@ export async function PATCH(request: Request) {
   }
   if (!id) return NextResponse.json({ error: "商品无效。" }, { status: 400 });
   if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
-  const update: { featured?: boolean; is_published?: boolean; name?: string; category?: string; price?: number; shipping_fee?: number; stock?: string; inventory_quantity?: number; image_url?: string; color_images?: Record<string, string>; color_prices?: Record<string, number>; gallery?: string[]; detail_images?: string[]; detail_images_by_color?: Record<string, string[]>; short_description?: string; description?: string; translations?: ProductTranslations; materials?: string[]; dimensions?: string; colors?: string[]; size_options?: string[] } = {};
+  const update: { featured?: boolean; is_published?: boolean; name?: string; category?: string; price?: number; shipping_fee?: number; stock?: string; inventory_quantity?: number; image_url?: string; color_images?: Record<string, string>; color_prices?: Record<string, number>; gallery?: string[]; detail_images_by_color?: Record<string, string[]>; short_description?: string; description?: string; translations?: ProductTranslations; materials?: string[]; dimensions?: string; colors?: string[]; size_options?: string[] } = {};
   if (typeof featured === "boolean") update.featured = featured;
   if (typeof isPublished === "boolean") update.is_published = isPublished;
   if (name !== undefined) {
@@ -368,12 +367,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "商品图片无效。" }, { status: 400 });
     }
     update.gallery = gallery;
-  }
-  if (detailImages !== undefined) {
-    if (!Array.isArray(detailImages) || detailImages.some((image) => typeof image !== "string" || !image.startsWith("https://"))) {
-      return NextResponse.json({ error: "详情图无效。" }, { status: 400 });
-    }
-    update.detail_images = detailImages;
   }
   if (detailImagesByColor !== undefined) {
     if (!isValidDetailByColor(detailImagesByColor)) {
@@ -414,7 +407,7 @@ export async function PATCH(request: Request) {
     update.size_options = [...new Set(sizes.map((size) => size.trim()))];
   }
   if (Object.keys(update).length === 0) return NextResponse.json({ error: "没有可保存的修改。" }, { status: 400 });
-  const { data, error } = await supabase.from("products").update(update).eq("id", id).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images, detail_images_by_color").single();
+  const { data, error } = await supabase.from("products").update(update).eq("id", id).select("id, name, category, price, stock, inventory_quantity, shipping_fee, short_description, description, translations, materials, dimensions, colors, size_options, featured, is_published, image_url, color_images, color_prices, gallery, detail_images_by_color").single();
   if (error) return NextResponse.json({ error: "商品更新失败。" }, { status: 500 });
   void recordAdminAction(supabase, adminEmail, "updated", "product", id, update);
   return NextResponse.json({ item: data });

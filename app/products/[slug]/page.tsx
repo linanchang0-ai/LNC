@@ -71,8 +71,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const selectedPrice = priceForColor(product, selectedColor);
   const productName = translateProductField(locale, product.translations, "name", product.name);
   const productDescription = translateProductField(locale, product.translations, "description", product.description);
-  const colorDetailImages = product?.detailImagesByColor?.[selectedColor] ?? [];
-  const activeDetailImages = colorDetailImages.length ? colorDetailImages : product?.detailImages ?? [];
+  const activeDetailImages = product?.detailImagesByColor?.[selectedColor] ?? [];
 
   const selectImage = (image: string) => {
     setActiveImage(image);

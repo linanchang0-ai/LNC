@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from
 
 export const dynamic = "force-dynamic";
 
-type AdminProduct = { id: string; name: string; category: string | null; price: number; shipping_fee: number | null; inventory_quantity: number | null; short_description: string | null; description: string | null; translations: unknown; materials: unknown; dimensions: string | null; colors: unknown; size_options: unknown; featured: boolean; is_published: boolean; image_url: string | null; color_images: unknown; color_prices: unknown; gallery: unknown; detail_images: unknown; detail_images_by_color: unknown };
+type AdminProduct = { id: string; name: string; category: string | null; price: number; shipping_fee: number | null; inventory_quantity: number | null; short_description: string | null; description: string | null; translations: unknown; materials: unknown; dimensions: string | null; colors: unknown; size_options: unknown; featured: boolean; is_published: boolean; image_url: string | null; color_images: unknown; color_prices: unknown; gallery: unknown; detail_images_by_color: unknown };
 type AdminCategory = { id: string; slug: string; name: string; name_zh?: string | null };
 
 const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
@@ -123,16 +123,12 @@ export default function AdminProductsPage() {
   const editorDialogRef = useRef<HTMLDialogElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState({ name: "", category: "", price: "", inventoryQuantity: "", shortDescription: "", description: "", translations: {} as ProductTranslations, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {} as Record<string, string>, colorPrices: {} as Record<string, string>, gallery: [] as string[], detailImages: [] as string[], detailImagesByColor: {} as Record<string, string[]> });
+  const [draft, setDraft] = useState({ name: "", category: "", price: "", inventoryQuantity: "", shortDescription: "", description: "", translations: {} as ProductTranslations, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {} as Record<string, string>, colorPrices: {} as Record<string, string>, gallery: [] as string[], detailImagesByColor: {} as Record<string, string[]> });
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [draggedDetailImageIndex, setDraggedDetailImageIndex] = useState<number | null>(null);
-  const [dropDetailImageIndex, setDropDetailImageIndex] = useState<number | null>(null);
-  const detailImageDragRef = useRef<{ fromIndex: number; toIndex: number; pointerId: number } | null>(null);
   const [pendingPrimaryImages, setPendingPrimaryImages] = useState<File[]>([]);
-  const [pendingDetailImages, setPendingDetailImages] = useState<File[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryZh, setNewCategoryZh] = useState("");
   const [categorySaving, setCategorySaving] = useState(false);
@@ -183,11 +179,9 @@ export default function AdminProductsPage() {
     setEditingId(product.id);
     setSaveError("");
     setPendingPrimaryImages([]);
-    setPendingDetailImages([]);
     const primaryImage = product.image_url || gallery[0] || "";
-    const detailImages = toStringList(product.detail_images);
     const detailImagesByColor = toDetailByColor(product.detail_images_by_color);
-    setDraft({ name: product.name, category: product.category ?? "", price: String(product.price), inventoryQuantity: String(product.inventory_quantity ?? 0), shortDescription: product.short_description ?? "", description: product.description ?? "", translations: normalizeProductTranslations(product.translations) ?? {}, materials: materials.join(", "), dimensions: product.dimensions ?? "", colors: colors.join(", "), sizes: sizes.join(", "), primaryImage, colorImages, colorPrices, gallery: gallery.filter((image) => image !== primaryImage), detailImages, detailImagesByColor });
+    setDraft({ name: product.name, category: product.category ?? "", price: String(product.price), inventoryQuantity: String(product.inventory_quantity ?? 0), shortDescription: product.short_description ?? "", description: product.description ?? "", translations: normalizeProductTranslations(product.translations) ?? {}, materials: materials.join(", "), dimensions: product.dimensions ?? "", colors: colors.join(", "), sizes: sizes.join(", "), primaryImage, colorImages, colorPrices, gallery: gallery.filter((image) => image !== primaryImage), detailImagesByColor });
   };
 
   const beginCreating = () => {
@@ -195,8 +189,7 @@ export default function AdminProductsPage() {
     setEditingId(null);
     setSaveError("");
     setPendingPrimaryImages([]);
-    setPendingDetailImages([]);
-    setDraft({ name: "", category: "", price: "", inventoryQuantity: "0", shortDescription: "", description: "", translations: {}, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {}, colorPrices: {}, gallery: [], detailImages: [], detailImagesByColor: {} });
+    setDraft({ name: "", category: "", price: "", inventoryQuantity: "0", shortDescription: "", description: "", translations: {}, materials: "", dimensions: "", colors: "", sizes: "", primaryImage: "", colorImages: {}, colorPrices: {}, gallery: [], detailImagesByColor: {} });
   };
 
   const closeEditor = () => {
@@ -204,22 +197,7 @@ export default function AdminProductsPage() {
     setCreating(false);
     setEditingId(null);
     setPendingPrimaryImages([]);
-    setPendingDetailImages([]);
     setSaveError("");
-  };
-
-  const removeImage = (imageIndex: number) => {
-    setDraft((current) => ({ ...current, detailImages: current.detailImages.filter((_, index) => index !== imageIndex) }));
-  };
-
-  const moveDetailImage = (fromIndex: number, toIndex: number) => {
-    setDraft((current) => {
-      if (fromIndex < 0 || toIndex < 0 || fromIndex >= current.detailImages.length || toIndex >= current.detailImages.length) return current;
-      const detailImages = [...current.detailImages];
-      const [image] = detailImages.splice(fromIndex, 1);
-      detailImages.splice(toIndex, 0, image);
-      return { ...current, detailImages };
-    });
   };
 
   const removeColorDetailImage = (color: string, imageIndex: number) => {
@@ -242,35 +220,6 @@ export default function AdminProductsPage() {
     });
   };
 
-  const handleDetailImagePointerDown = (event: PointerEvent<HTMLDivElement>, index: number) => {
-    if (event.button !== 0 || uploading || saving || (event.target instanceof Element && event.target.closest("button"))) return;
-    event.preventDefault();
-    detailImageDragRef.current = { fromIndex: index, toIndex: index, pointerId: event.pointerId };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setDraggedDetailImageIndex(index);
-    setDropDetailImageIndex(index);
-  };
-
-  const handleDetailImagePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const drag = detailImageDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-detail-image-index]");
-    const targetIndex = Number(target?.dataset.detailImageIndex);
-    if (target && Number.isInteger(targetIndex)) {
-      drag.toIndex = targetIndex;
-      setDropDetailImageIndex(targetIndex);
-    }
-  };
-
-  const handleDetailImagePointerEnd = (event: PointerEvent<HTMLDivElement>) => {
-    const drag = detailImageDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    if (drag.fromIndex !== drag.toIndex) moveDetailImage(drag.fromIndex, drag.toIndex);
-    detailImageDragRef.current = null;
-    setDraggedDetailImageIndex(null);
-    setDropDetailImageIndex(null);
-  };
-
   const uploadImages = async (files: FileList | File[], target: "primary" | "detail", color?: string) => {
     if (!editingId) return;
     const selectedFiles = Array.from(files);
@@ -284,21 +233,13 @@ export default function AdminProductsPage() {
     try {
       const uploadedUrls = await uploadProductImages(editingId, selectedFiles);
       if (target === "detail") {
-        if (color) {
-          const colorList = [...(draft.detailImagesByColor[color] ?? []), ...uploadedUrls];
-          const detailImagesByColor = { ...draft.detailImagesByColor, [color]: colorList };
-          const saveResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId, detailImagesByColor }) });
-          const savedData = await saveResponse.json().catch(() => ({})) as { item?: AdminProduct; error?: string };
-          if (!saveResponse.ok || !savedData.item) throw new Error(savedData.error ?? "按颜色详情图保存失败。请重新上传。");
-          setDraft((current) => ({ ...current, detailImagesByColor }));
-          setItems((current) => current.map((product) => product.id === editingId ? { ...product, ...savedData.item } : product));
-          return;
-        }
-        const detailImages = [...draft.detailImages, ...uploadedUrls];
-        const saveResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId, detailImages }) });
+        if (!color) return;
+        const colorList = [...(draft.detailImagesByColor[color] ?? []), ...uploadedUrls];
+        const detailImagesByColor = { ...draft.detailImagesByColor, [color]: colorList };
+        const saveResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingId, detailImagesByColor }) });
         const savedData = await saveResponse.json().catch(() => ({})) as { item?: AdminProduct; error?: string };
-        if (!saveResponse.ok || !savedData.item) throw new Error(savedData.error ?? "详情图保存失败。请重新上传。");
-        setDraft((current) => ({ ...current, detailImages }));
+        if (!saveResponse.ok || !savedData.item) throw new Error(savedData.error ?? "按颜色详情图保存失败。请重新上传。");
+        setDraft((current) => ({ ...current, detailImagesByColor }));
         setItems((current) => current.map((product) => product.id === editingId ? { ...product, ...savedData.item } : product));
         return;
       }
@@ -311,14 +252,14 @@ export default function AdminProductsPage() {
   };
 
   const uploadPendingImages = async (productId: string) => {
-    const files = [...pendingPrimaryImages, ...pendingDetailImages];
-    if (!files.length) return { primaryImage: draft.primaryImage, gallery: draft.gallery, detailImages: draft.detailImages };
+    const files = pendingPrimaryImages;
+    if (!files.length) return { primaryImage: draft.primaryImage, gallery: draft.gallery };
 
     const uploadedUrls = await uploadProductImages(productId, files);
 
     const newPrimaryImages = uploadedUrls.slice(0, pendingPrimaryImages.length);
     const primaryImage = draft.primaryImage || newPrimaryImages[0] || "";
-    return { primaryImage, gallery: [...draft.gallery, ...newPrimaryImages.slice(draft.primaryImage ? 0 : 1)], detailImages: [...draft.detailImages, ...uploadedUrls.slice(pendingPrimaryImages.length)] };
+    return { primaryImage, gallery: [...draft.gallery, ...newPrimaryImages.slice(draft.primaryImage ? 0 : 1)] };
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>, target: "primary" | "detail", color?: string) => {
@@ -326,10 +267,9 @@ export default function AdminProductsPage() {
     event.target.value = "";
   };
 
-  const handlePendingFileChange = (event: ChangeEvent<HTMLInputElement>, target: "primary" | "detail") => {
+  const handlePendingFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
-    if (target === "primary") setPendingPrimaryImages(selectedFiles);
-    else setPendingDetailImages(selectedFiles);
+    setPendingPrimaryImages(selectedFiles);
     event.target.value = "";
   };
 
@@ -351,11 +291,11 @@ export default function AdminProductsPage() {
           colors: Object.fromEntries(currentColors.flatMap((color) => translation.colors?.[color] ? [[color, translation.colors[color]]] : [])),
         }];
       })) as ProductTranslations;
-      const response = await fetch("/api/admin", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, price: Number(draft.price), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, translations, materials: currentMaterials, dimensions: draft.dimensions, colors: currentColors, sizes, primaryImage: draft.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: draft.gallery, detailImages: draft.detailImages, detailImagesByColor }) });
+      const response = await fetch("/api/admin", { method: id ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, name: draft.name, category: draft.category, price: Number(draft.price), inventoryQuantity: Number(draft.inventoryQuantity), shortDescription: draft.shortDescription, description: draft.description, translations, materials: currentMaterials, dimensions: draft.dimensions, colors: currentColors, sizes, primaryImage: draft.primaryImage, colorImages: draft.colorImages, colorPrices, gallery: draft.gallery, detailImagesByColor }) });
       const data = await response.json() as { item?: AdminProduct; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error ?? "商品保存失败。");
       let savedProduct = data.item;
-      const hasPendingImages = pendingPrimaryImages.length > 0 || pendingDetailImages.length > 0;
+      const hasPendingImages = pendingPrimaryImages.length > 0;
       if (!id && hasPendingImages) {
         setItems((current) => [savedProduct, ...current.filter((product) => product.id !== savedProduct.id)]);
         setCreating(false);
@@ -366,8 +306,7 @@ export default function AdminProductsPage() {
         const images = await uploadPendingImages(savedProduct.id);
         setDraft((current) => ({ ...current, ...images }));
         setPendingPrimaryImages([]);
-        setPendingDetailImages([]);
-        const imageResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: savedProduct.id, primaryImage: images.primaryImage, gallery: images.gallery, detailImages: images.detailImages }) });
+        const imageResponse = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: savedProduct.id, primaryImage: images.primaryImage, gallery: images.gallery }) });
         const imageData = await imageResponse.json() as { item?: AdminProduct; error?: string };
         if (!imageResponse.ok || !imageData.item) throw new Error(imageData.error ?? "图片保存失败。");
         savedProduct = imageData.item;
@@ -548,7 +487,7 @@ export default function AdminProductsPage() {
           <div className="product-editor-heading"><h2 id="admin-product-editor-title">{creating ? "新增商品" : "编辑商品"}</h2><div className="product-editor-actions"><button className="small-button" type="button" onClick={() => void saveProduct(editingId ?? undefined)} disabled={saving || uploading}>{saving ? "正在保存..." : creating ? "创建商品" : "保存修改"}</button><button className="ghost-button" type="button" onClick={closeEditor} disabled={saving || uploading}>取消</button></div></div>
           {saveError ? <p className="error-box" role="alert">{saveError}</p> : null}
           {editingId ? <div className="product-image-editor">
-            <div className="product-image-heading"><div><h3>商品图片</h3><p>主图用于商品列表，详情图显示在商品详情页。</p></div></div>
+            <div className="product-image-heading"><div><h3>商品图片</h3><p>主图用于商品列表；各颜色的详情图显示在商品详情页。</p></div></div>
             <div className="product-image-channels">
             <div className="product-image-group">
               <strong>主图</strong>
@@ -556,36 +495,11 @@ export default function AdminProductsPage() {
               {draft.gallery.map((image, index) => <div className="product-primary-image" key={`${image}-${index}`}><img src={image} alt={`${draft.name} 的主图 ${index + 2}`} /><button type="button" className="product-image-remove" onClick={() => setDraft((current) => ({ ...current, gallery: current.gallery.filter((_, imageIndex) => imageIndex !== index) }))} aria-label={`删除主图 ${index + 2}`} title={`删除主图 ${index + 2}`}>×</button></div>)}
               <label className={`product-image-upload-button${uploading ? " is-disabled" : ""}`}>{uploading ? "正在上传..." : "添加主图"}<input className="product-image-file-input" type="file" accept="image/*" multiple disabled={uploading} onChange={(event) => handleFileChange(event, "primary")} /></label>
             </div>
-            <div className="product-image-group">
-              <strong>通用详情图（可选）</strong>
-              <p className="product-image-order-help">某颜色未单独上传详情图时，前台展示这组通用详情图；可拖动或用箭头调整顺序。</p>
-              <div className="product-image-strip-row">
-                <div className="product-image-strip" aria-label="商品详情图">
-                  {draft.detailImages.map((image, index) => <div
-                    className={`product-image-item${draggedDetailImageIndex === index ? " is-dragging" : ""}${dropDetailImageIndex === index && draggedDetailImageIndex !== index ? " is-drop-target" : ""}${!uploading && !saving ? " is-draggable" : ""}`}
-                    key={`${image}-${index}`}
-                    data-detail-image-index={index}
-                    onPointerDown={(event) => handleDetailImagePointerDown(event, index)}
-                    onPointerMove={handleDetailImagePointerMove}
-                    onPointerUp={handleDetailImagePointerEnd}
-                    onPointerCancel={handleDetailImagePointerEnd}
-                  >
-                    <div className="product-image-thumb"><img src={image} alt={`${draft.name} 的详情图 ${index + 1}`} draggable={false} /><button type="button" className="product-image-remove" onClick={() => removeImage(index)} aria-label={`删除详情图 ${index + 1}`} title={`删除详情图 ${index + 1}`}>×</button></div>
-                    <div className="product-image-order">
-                      <button type="button" onClick={() => moveDetailImage(index, index - 1)} disabled={index === 0 || uploading || saving} aria-label={`详情图 ${index + 1} 上移`} title="上移">↑</button>
-                      <span>{index + 1}</span>
-                      <button type="button" onClick={() => moveDetailImage(index, index + 1)} disabled={index === draft.detailImages.length - 1 || uploading || saving} aria-label={`详情图 ${index + 1} 下移`} title="下移">↓</button>
-                    </div>
-                  </div>)}
-                </div>
-                <label className={`product-image-dropzone${uploading ? " is-disabled" : ""}`}>{uploading ? "正在上传..." : "选择详情图"}<input className="product-image-file-input" type="file" accept="image/*" multiple disabled={uploading} onChange={(event) => handleFileChange(event, "detail")} /></label>
-              </div>
-            </div>
             </div>
             {draftColors.length > 0 ? (
               <div className="color-primary-images">
                 <strong>颜色主图与详情图</strong>
-                <p>每个颜色可单独上传主图和详情图；前台切换颜色时，详情图跟随切换。某颜色未传详情图时，使用上方通用详情图。</p>
+                <p>每个颜色可单独上传主图和详情图；前台切换颜色时，详情图跟随切换。未传详情图的颜色不显示详情图区块。</p>
                 {mainImages.length > 0 ? <button type="button" className="small-button" onClick={matchColorImagesByOrder}>按顺序匹配颜色主图</button> : null}
                 <div className="color-primary-images-grid">
                   {draftColors.map((color) => {
@@ -619,7 +533,7 @@ export default function AdminProductsPage() {
                 </div>
               </div>
             ) : null}
-          </div> : <div className="product-image-pending"><strong>商品图片</strong><span>可先从图库选择图片，创建商品后会自动上传。</span><div className="product-image-channels"><label className="product-image-upload-button">{pendingPrimaryImages.length ? `已选 ${pendingPrimaryImages.length} 张主图` : "选择主图"}<input className="product-image-file-input" type="file" accept="image/*" multiple onChange={(event) => handlePendingFileChange(event, "primary")} /></label><label className="product-image-upload-button">{pendingDetailImages.length ? `已选 ${pendingDetailImages.length} 张详情图` : "选择详情图"}<input className="product-image-file-input" type="file" accept="image/*" multiple onChange={(event) => handlePendingFileChange(event, "detail")} /></label></div></div>}
+          </div> : <div className="product-image-pending"><strong>商品图片</strong><span>可先从图库选择主图，创建商品后会自动上传；详情图在创建商品后按颜色上传。</span><div className="product-image-channels"><label className="product-image-upload-button">{pendingPrimaryImages.length ? `已选 ${pendingPrimaryImages.length} 张主图` : "选择主图"}<input className="product-image-file-input" type="file" accept="image/*" multiple onChange={(event) => handlePendingFileChange(event)} /></label></div></div>}
           <div className="field"><label>商品名称</label><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></div>
           <div className="field">
             <strong>商品译文（西班牙语为原文）</strong>
