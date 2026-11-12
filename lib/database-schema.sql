@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
+  name_zh TEXT,
   description TEXT,
   image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()

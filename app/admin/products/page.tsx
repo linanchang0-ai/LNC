@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from
 export const dynamic = "force-dynamic";
 
 type AdminProduct = { id: string; name: string; category: string | null; price: number; shipping_fee: number | null; inventory_quantity: number | null; short_description: string | null; description: string | null; translations: unknown; materials: unknown; dimensions: string | null; colors: unknown; size_options: unknown; featured: boolean; is_published: boolean; image_url: string | null; color_images: unknown; color_prices: unknown; gallery: unknown; detail_images: unknown };
-type AdminCategory = { id: string; slug: string; name: string };
+type AdminCategory = { id: string; slug: string; name: string; name_zh?: string | null };
 
 const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
 const STORAGE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -124,6 +124,7 @@ export default function AdminProductsPage() {
   const [pendingPrimaryImages, setPendingPrimaryImages] = useState<File[]>([]);
   const [pendingDetailImages, setPendingDetailImages] = useState<File[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryZh, setNewCategoryZh] = useState("");
   const [categorySaving, setCategorySaving] = useState(false);
   const [categoryExpanded, setCategoryExpanded] = useState(false);
   const [expandedProductCategories, setExpandedProductCategories] = useState<string[]>([]);
@@ -139,16 +140,19 @@ export default function AdminProductsPage() {
       if (dialog.open) dialog.close();
     };
   }, [editorOpen]);
+  const categoryBySlug = (slug: string | null | undefined) => categories.find((category) => category.slug === slug);
+  const categoryLabel = (category: AdminCategory | null | undefined) => {
+    if (!category) return "未分类";
+    return category.name_zh?.trim() || translateText("zh", category.name);
+  };
   const productGroups = Array.from(new Set(products.map((product) => product.category || "uncategorized"))).map((categorySlug) => {
-    const resolvedName = categories.find((category) => category.slug === categorySlug)?.name;
+    const resolvedCategory = categoryBySlug(categorySlug);
     return {
       slug: categorySlug,
-      name: resolvedName ? translateText("zh", resolvedName) : (categorySlug === "uncategorized" ? "未分类" : categorySlug),
+      name: resolvedCategory ? categoryLabel(resolvedCategory) : (categorySlug === "uncategorized" ? "未分类" : categorySlug),
       products: products.filter((product) => (product.category || "uncategorized") === categorySlug),
     };
   });
-  const categoryNameBySlug = (slug: string | null | undefined) => categories.find((category) => category.slug === slug)?.name;
-  const categoryLabel = (name: string | null | undefined) => name ? translateText("zh", name) : "未分类";
   const isProductCategoryExpanded = (categorySlug: string) => expandedProductCategories.includes(categorySlug);
   const toggleProductCategory = (categorySlug: string) => {
     setExpandedProductCategories((current) => current.includes(categorySlug) ? current.filter((slug) => slug !== categorySlug) : [...current, categorySlug]);
@@ -363,16 +367,18 @@ export default function AdminProductsPage() {
 
   const createCategory = async () => {
     const name = newCategoryName.trim();
+    const nameZh = newCategoryZh.trim();
     if (!name) return;
     setCategorySaving(true);
     setSaveError("");
     try {
-      const response = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resource: "categories", name }) });
+      const response = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resource: "categories", name, nameZh }) });
       const data = await response.json() as { item?: AdminCategory; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error ?? "分类创建失败。");
       const createdCategory = data.item;
       setCategories((current) => [...current, createdCategory].sort((first, second) => first.name.localeCompare(second.name)));
       setNewCategoryName("");
+      setNewCategoryZh("");
     } catch (categoryError) {
       setSaveError(categoryError instanceof Error ? categoryError.message : "分类创建失败。");
     } finally {
@@ -381,7 +387,7 @@ export default function AdminProductsPage() {
   };
 
   const deleteCategory = async (category: AdminCategory) => {
-    if (!window.confirm(`确定要删除分类“${categoryLabel(category.name)}”吗？`)) return;
+    if (!window.confirm(`确定要删除分类“${categoryLabel(category)}”吗？`)) return;
     setSaveError("");
     const response = await fetch(`/api/admin?resource=categories&id=${encodeURIComponent(category.id)}`, { method: "DELETE" });
     const data = await response.json() as { error?: string };
@@ -429,11 +435,12 @@ export default function AdminProductsPage() {
         </button>
         {categoryExpanded ? <div className="admin-category-body">
           <div className="field-row category-create-row">
-            <div className="field"><label htmlFor="new-category">新建分类</label><input id="new-category" value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder="例如：配件" /></div>
+            <div className="field"><label htmlFor="new-category">西语名称（前台显示）</label><input id="new-category" value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder="例如：Camiseta de baloncesto" /></div>
+            <div className="field"><label htmlFor="new-category-zh">中文名称（后台显示）</label><input id="new-category-zh" value={newCategoryZh} onChange={(event) => setNewCategoryZh(event.target.value)} placeholder="例如：篮球球衣" /></div>
             <button className="small-button category-create-button" type="button" onClick={() => void createCategory()} disabled={categorySaving || !newCategoryName.trim()}>{categorySaving ? "正在保存..." : "添加分类"}</button>
           </div>
           <div className="filter-bar" aria-label="已有商品分类">
-            {categories.map((category) => <span className="filter-chip" key={category.id}>{categoryLabel(category.name)} <button type="button" onClick={() => void deleteCategory(category)} aria-label={`删除 ${categoryLabel(category.name)}`}>×</button></span>)}
+            {categories.map((category) => <span className="filter-chip" key={category.id}>{categoryLabel(category)} <button type="button" onClick={() => void deleteCategory(category)} aria-label={`删除 ${categoryLabel(category)}`}>×</button></span>)}
           </div>
           {categoriesError ? <p className="error-box">{categoriesError}</p> : null}
         </div> : null}
@@ -454,7 +461,7 @@ export default function AdminProductsPage() {
                 <tr key={product.id}>
                   <td><div>{product.name}</div><button className="small-button" type="button" style={{ marginTop: 8 }} onClick={() => beginEditing(product)}>编辑</button></td>
                   <td>{product.image_url ? <img className="admin-product-thumb" src={product.image_url} alt="" /> : "暂无图片"}</td>
-                  <td>{categoryLabel(categoryNameBySlug(product.category))}</td>
+                  <td>{categoryLabel(categoryBySlug(product.category))}</td>
                   <td>{formatPrice(product.price)}</td>
                   <td>{product.inventory_quantity === 0 ? "已售罄" : (product.inventory_quantity ?? 0) <= 5 ? "库存不足" : "有库存"}</td>
                   <td>{product.inventory_quantity ?? 0}</td>
@@ -477,7 +484,7 @@ export default function AdminProductsPage() {
                 {product.image_url ? <img src={product.image_url} alt="" /> : <div className="mobile-admin-product-placeholder">暂无图片</div>}
                 <div>
                   <strong>{product.name}</strong>
-                  <span>{categoryLabel(categoryNameBySlug(product.category))}</span>
+                  <span>{categoryLabel(categoryBySlug(product.category))}</span>
                   <span className="status-pill">{product.is_published ? "已发布" : "草稿"}</span>
                 </div>
                 </div>
@@ -564,7 +571,7 @@ export default function AdminProductsPage() {
             <div className="field"><label>尺寸描述（英语）</label><input value={draft.translations.en?.dimensions ?? ""} onChange={(event) => updateTranslationText("en", "dimensions", event.target.value)} /></div>
             <div className="field"><label>尺寸描述（简体中文）</label><input value={draft.translations.zh?.dimensions ?? ""} onChange={(event) => updateTranslationText("zh", "dimensions", event.target.value)} /></div>
           </div>
-          <div className="field-row two-col"><div className="field"><label>商品分类</label><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}><option value="">请选择</option>{categories.map((category) => <option key={category.slug} value={category.slug}>{categoryLabel(category.name)}</option>)}</select></div><div className="field"><label>商品价格（MXN）</label><input type="number" min="0.01" step="0.01" value={draft.price} onChange={(event) => setDraft({ ...draft, price: event.target.value })} /></div></div>
+          <div className="field-row two-col"><div className="field"><label>商品分类</label><select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}><option value="">请选择</option>{categories.map((category) => <option key={category.slug} value={category.slug}>{categoryLabel(category)}</option>)}</select></div><div className="field"><label>商品价格（MXN）</label><input type="number" min="0.01" step="0.01" value={draft.price} onChange={(event) => setDraft({ ...draft, price: event.target.value })} /></div></div>
           <div className="field"><label>可售库存</label><input type="number" min="0" step="1" value={draft.inventoryQuantity} onChange={(event) => setDraft({ ...draft, inventoryQuantity: event.target.value })} /></div>
           <div className="field"><label>简短描述</label><input value={draft.shortDescription} onChange={(event) => setDraft({ ...draft, shortDescription: event.target.value })} /></div>
           <div className="field"><label>详细描述</label><textarea rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></div>

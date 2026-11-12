@@ -107,7 +107,6 @@ export async function GET(request: Request) {
   }
 
   const queries = {
-    categories: () => supabase.from("categories").select("id, slug, name").order("name"),
     orders: () => supabase.from("orders").select("id, order_number, customer_name, guest_email, phone, shipping_address, total, order_status, payment_status, paypal_capture_id, tracking_number, shipping_carrier, shipped_at, created_at").order("created_at", { ascending: false }),
     returns: () => supabase.from("returns").select("id, order_id, reason, status, inspection_notes, restock_approved, created_at, orders(customer_name, guest_email, order_number)").order("created_at", { ascending: false }),
     refunds: () => supabase.from("refunds").select("id, order_id, refund_amount, refund_status, refund_reason, created_at, orders(customer_name, guest_email, order_number)").order("created_at", { ascending: false }),
@@ -130,6 +129,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ items: customers });
   }
 
+  if (resource === "categories") {
+    const primaryResult = await supabase.from("categories").select("id, slug, name, name_zh").order("name");
+    let categoryRows = primaryResult.data as Record<string, unknown>[] | null;
+    let categoryError = primaryResult.error;
+    if (categoryError?.code === "42703") {
+      const fallbackResult = await supabase.from("categories").select("id, slug, name").order("name");
+      categoryRows = (fallbackResult.data ?? []).map((category) => ({ ...(category as Record<string, unknown>), name_zh: null }));
+      categoryError = fallbackResult.error;
+    }
+    if (categoryError) return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
+    return NextResponse.json({ items: categoryRows ?? [] });
+  }
+
   if (!resource || !(resource in queries)) return NextResponse.json({ error: "未找到对应资源。" }, { status: 404 });
   const { data, error } = await queries[resource as keyof typeof queries]();
   if (error) return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
@@ -150,21 +162,26 @@ export async function POST(request: Request) {
   const authorized = await authorizedClient(request);
   if (!authorized) return NextResponse.json({ error: "未登录或无权限。" }, { status: 401 });
   const { supabase, adminEmail, role } = authorized;
-  let body: { name?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; code?: string; discountType?: "percentage" | "fixed"; discountValue?: number; minimumSubtotal?: number; expiresAt?: string; maxUses?: number | null };
+  let body: { name?: string; nameZh?: string; category?: string; price?: number; shippingFee?: number; inventoryQuantity?: number; shortDescription?: string; description?: string; translations?: unknown; materials?: string[]; dimensions?: string; colors?: string[]; sizes?: string[]; primaryImage?: string; colorImages?: Record<string, string>; colorPrices?: Record<string, number>; gallery?: string[]; detailImages?: string[]; resource?: string; code?: string; discountType?: "percentage" | "fixed"; discountValue?: number; minimumSubtotal?: number; expiresAt?: string; maxUses?: number | null };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "请求数据无效。" }, { status: 400 });
   }
-  const { name, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, code, discountType, discountValue, minimumSubtotal, expiresAt, maxUses } = body;
+  const { name, nameZh, category, price, shippingFee, inventoryQuantity, shortDescription, description, translations, materials, dimensions, colors, sizes, primaryImage, colorImages, colorPrices, gallery, detailImages, resource, code, discountType, discountValue, minimumSubtotal, expiresAt, maxUses } = body;
   if (resource === "categories") {
     if (!hasRole(role, ["admin", "operations"])) return NextResponse.json({ error: "未登录或无权限。" }, { status: 403 });
     const categoryName = name?.trim() ?? "";
+    const categoryNameZh = nameZh?.trim() ?? "";
     const slug = productSlug(categoryName);
     if (!categoryName || !slug) return NextResponse.json({ error: "请填写有效的分类名称。" }, { status: 400 });
-    const { data, error } = await supabase.from("categories").insert({ name: categoryName, slug }).select("id, slug, name").single();
+    let categoryInsert = await supabase.from("categories").insert({ name: categoryName, name_zh: categoryNameZh || null, slug }).select("id, slug, name, name_zh").single();
+    if (categoryInsert.error?.code === "42703") {
+      categoryInsert = await supabase.from("categories").insert({ name: categoryName, slug }).select("id, slug, name").single();
+    }
+    const { data, error } = categoryInsert;
     if (error) return NextResponse.json({ error: error.code === "23505" ? "该分类已存在。" : "分类创建失败。" }, { status: 500 });
-    void recordAdminAction(supabase, adminEmail, "created", "category", data.id, { name: data.name, slug: data.slug });
+    void recordAdminAction(supabase, adminEmail, "created", "category", data.id, { name: data.name, name_zh: (data as { name_zh?: string | null }).name_zh ?? null, slug: data.slug });
     return NextResponse.json({ item: data }, { status: 201 });
   }
   if (resource === "coupons") {

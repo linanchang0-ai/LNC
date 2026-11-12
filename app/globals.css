@@ -2800,7 +2800,7 @@ th {
 }
 
 .category-create-row {
-  grid-template-columns: minmax(0, 320px) max-content;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content;
   align-items: end;
 }
 
