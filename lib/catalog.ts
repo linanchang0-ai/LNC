@@ -28,6 +28,7 @@ type CatalogRow = {
   color_prices: Record<string, number> | null;
   gallery: string[];
   detail_images: string[] | null;
+  detail_images_by_color: Record<string, string[]> | null;
   is_published: boolean;
 };
 
@@ -62,8 +63,9 @@ export async function getCatalogCategories(): Promise<Category[]> {
 export async function getCatalogProducts(): Promise<Product[]> {
   const supabase = getSupabaseServerClient();
   if (!supabase) return useDemoCatalog ? products : [];
-  const fields = "id, slug, name, category, price, old_price, short_description, description, translations, materials, dimensions, colors, size_options, stock, inventory_quantity, shipping_fee, featured, limited, image_url, color_images, color_prices, gallery, detail_images, is_published, created_at";
+  const fields = "id, slug, name, category, price, old_price, short_description, description, translations, materials, dimensions, colors, size_options, stock, inventory_quantity, shipping_fee, featured, limited, image_url, color_images, color_prices, gallery, detail_images, detail_images_by_color, is_published, created_at";
   const fallbackFields = [
+    fields.replace(", detail_images_by_color", ""),
     fields.replace(", translations", ""),
     fields.replace(", color_prices", ""),
     fields.replace(", size_options", ""),
@@ -114,6 +116,7 @@ export async function getCatalogProducts(): Promise<Product[]> {
       colorPrices: row.color_prices ?? {},
       gallery: row.image_url ? [row.image_url, ...(row.gallery?.[0] === row.image_url ? row.gallery.slice(1) : row.gallery ?? [])] : row.gallery ?? [],
       detailImages: row.detail_images ?? [],
+      detailImagesByColor: row.detail_images_by_color ?? {},
     };
   });
 }

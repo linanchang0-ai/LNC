@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS products (
   image_url TEXT,
   gallery JSONB,
   detail_images JSONB,
+  detail_images_by_color JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

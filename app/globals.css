@@ -247,7 +247,7 @@ button {
 
 .color-primary-images-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
 }
 
@@ -265,6 +265,28 @@ button {
 .color-primary-image .product-primary-image {
   width: 150px;
   margin: 0;
+}
+
+.color-detail-images {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
+.color-detail-images > strong {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.color-detail-images .product-image-strip-row {
+  flex-wrap: wrap;
+}
+
+.color-detail-images .product-image-strip {
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 
 .product-primary-image {

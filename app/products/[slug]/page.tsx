@@ -71,6 +71,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const selectedPrice = priceForColor(product, selectedColor);
   const productName = translateProductField(locale, product.translations, "name", product.name);
   const productDescription = translateProductField(locale, product.translations, "description", product.description);
+  const colorDetailImages = product?.detailImagesByColor?.[selectedColor] ?? [];
+  const activeDetailImages = colorDetailImages.length ? colorDetailImages : product?.detailImages ?? [];
 
   const selectImage = (image: string) => {
     setActiveImage(image);
@@ -299,10 +301,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           ))}
         </ul>
       </section>
-      {product.detailImages?.length ?       <section className="product-detail-images" aria-label={t("Detalles del producto")}>
+      {activeDetailImages.length ?       <section className="product-detail-images" aria-label={t("Detalles del producto")}>
         <h2 className="section-title">{t("Detalles del producto")}</h2>
         <div>
-          {product.detailImages.map((image, index) => <img key={`${product.slug}-detail-${index}`} src={image} alt={`${productName} ${t("detalle")} ${index + 1}`} loading="lazy" />)}
+          {activeDetailImages.map((image, index) => <img key={`${product.slug}-detail-${selectedColor}-${index}`} src={image} alt={`${productName} ${t("detalle")} ${index + 1}`} loading="lazy" />)}
         </div>
       </section> : null}
       <TrustSignals />

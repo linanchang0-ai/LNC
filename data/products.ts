@@ -31,6 +31,7 @@ export type Product = {
   colorPrices?: Record<string, number>;
   gallery: string[];
   detailImages?: string[];
+  detailImagesByColor?: Record<string, string[]>;
   stock: string;
   inventoryQuantity?: number;
   shippingFee?: number;
