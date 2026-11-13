@@ -40,7 +40,12 @@ type CategoryRow = {
 
 const useDemoCatalog = process.env.NODE_ENV === "development";
 
-export async function getCatalogCategories(): Promise<Category[]> {
+const CATALOG_CACHE_TTL_MS = 120_000;
+type CatalogCacheEntry<T> = { at: number; promise: Promise<T> };
+let productsCache: CatalogCacheEntry<Product[]> | null = null;
+let categoriesCache: CatalogCacheEntry<Category[]> | null = null;
+
+async function loadCatalogCategories(): Promise<Category[]> {
   const supabase = getSupabaseServerClient();
   if (!supabase) return useDemoCatalog ? fallbackCategories : [];
   const { data, error } = await supabase.from("categories").select("slug, name, description, image_url").order("name");
@@ -59,7 +64,22 @@ export async function getCatalogCategories(): Promise<Category[]> {
   });
 }
 
-export async function getCatalogProducts(): Promise<Product[]> {
+export async function getCatalogCategories(): Promise<Category[]> {
+  const now = Date.now();
+  if (categoriesCache && now - categoriesCache.at < CATALOG_CACHE_TTL_MS) {
+    return categoriesCache.promise;
+  }
+  const promise = loadCatalogCategories();
+  categoriesCache = { at: now, promise };
+  try {
+    return await promise;
+  } catch (error) {
+    categoriesCache = null;
+    throw error;
+  }
+}
+
+async function loadCatalogProducts(): Promise<Product[]> {
   const supabase = getSupabaseServerClient();
   if (!supabase) return useDemoCatalog ? products : [];
   const fields = "id, slug, name, category, price, old_price, short_description, description, translations, materials, dimensions, colors, size_options, stock, inventory_quantity, shipping_fee, featured, limited, image_url, color_images, color_prices, gallery, detail_images_by_color, is_published, created_at";
@@ -117,6 +137,21 @@ export async function getCatalogProducts(): Promise<Product[]> {
       detailImagesByColor: row.detail_images_by_color ?? {},
     };
   });
+}
+
+export async function getCatalogProducts(): Promise<Product[]> {
+  const now = Date.now();
+  if (productsCache && now - productsCache.at < CATALOG_CACHE_TTL_MS) {
+    return productsCache.promise;
+  }
+  const promise = loadCatalogProducts();
+  productsCache = { at: now, promise };
+  try {
+    return await promise;
+  } catch (error) {
+    productsCache = null;
+    throw error;
+  }
 }
 
 export async function getCatalogPopularProductIds(): Promise<{ ids: string[]; available: boolean }> {
