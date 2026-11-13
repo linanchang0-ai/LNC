@@ -2558,6 +2558,7 @@ th {
 }
 
 .color-swatch-image {
+  position: relative;
   display: block;
   aspect-ratio: 1 / 1;
   border-radius: 7px;
@@ -2633,6 +2634,7 @@ th {
 }
 
 .gallery-main-image {
+  position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -2651,13 +2653,13 @@ th {
 }
 
 .gallery-thumbnails { display: flex; gap: 10px; min-width: 0; overflow-x: auto; }
-.gallery-thumbnails button { flex: 0 0 76px; width: 76px; height: 76px; aspect-ratio: 1 / 1; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; overflow: hidden; }
+.gallery-thumbnails button { position: relative; flex: 0 0 76px; width: 76px; height: 76px; aspect-ratio: 1 / 1; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; overflow: hidden; }
 .gallery-thumbnails button.is-active { border-color: var(--text); }
 .gallery-thumbnails img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: 0; }
 
 .image-lightbox { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 5vw; background: rgba(17,17,17,0.9); }
 .image-lightbox img { max-width: 92vw; max-height: 88vh; object-fit: contain; }
-.image-lightbox button { position: absolute; top: 20px; right: 24px; border: 0; background: transparent; color: var(--white); font-size: 2.2rem; }
+.image-lightbox button { position: absolute; top: 20px; right: 24px; z-index: 2; border: 0; background: transparent; color: var(--white); font-size: 2.2rem; }
 
 .detail-panel {
   position: sticky;

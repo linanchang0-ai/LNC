@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { notFound, useRouter } from "next/navigation";
 import { formatPrice, type Product } from "@/data/products";
 import { ContactButton } from "@/components/ContactButton";
@@ -177,14 +178,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
       <div className="product-detail-layout">
         <div className="gallery-grid">
-          <button type="button" className="gallery-main-image" style={{ touchAction: "pan-y" }} {...swipeHandlers} onClick={() => setZoomOpen(true)} aria-label={t("Ampliar imagen del producto")}><img src={activeImage} alt={productName} /></button>
+          <button type="button" className="gallery-main-image" style={{ touchAction: "pan-y" }} {...swipeHandlers} onClick={() => setZoomOpen(true)} aria-label={t("Ampliar imagen del producto")}><Image src={activeImage} alt={productName} fill priority sizes="(max-width: 820px) 100vw, 58vw" style={{ objectFit: "cover" }} /></button>
           <div className="gallery-thumbnails">
-            {product.gallery.map((image, index) => <button type="button" key={`${product.slug}-${index}`} className={activeImage === image ? "is-active" : ""} onClick={() => selectImage(image)} aria-label={`${t("Ver imagen")} ${index + 1} ${t("de")} ${productName}`}><img src={image} alt={`${productName} ${t("miniatura")} ${index + 1}`} /></button>)}
+            {product.gallery.map((image, index) => <button type="button" key={`${product.slug}-${index}`} className={activeImage === image ? "is-active" : ""} onClick={() => selectImage(image)} aria-label={`${t("Ver imagen")} ${index + 1} ${t("de")} ${productName}`}><Image src={image} alt={`${productName} ${t("miniatura")} ${index + 1}`} fill sizes="76px" style={{ objectFit: "cover" }} /></button>)}
           </div>
           {activeDetailImages.length ? (
             <div className="gallery-detail-list">
               <h3 className="gallery-detail-title">{t("Detalles del producto")}</h3>
-              {activeDetailImages.map((image, index) => <img key={`${product.slug}-detail-${selectedColor}-${index}`} src={image} alt={`${productName} ${t("detalle")} ${index + 1}`} loading="lazy" />)}
+              {activeDetailImages.map((image, index) => <Image key={`${product.slug}-detail-${selectedColor}-${index}`} src={image} alt={`${productName} ${t("detalle")} ${index + 1}`} width={800} height={800} sizes="(max-width: 820px) 100vw, 45vw" loading="lazy" style={{ width: "100%", height: "auto", objectFit: "cover" }} />)}
             </div>
           ) : null}
         </div>
@@ -217,7 +218,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                   setActiveImage(colorImage);
                 }} disabled={isOutOfStock}>
                   {badgeCountForColor(color) > 0 ? <span className="color-swatch-badge">{badgeCountForColor(color)}</span> : null}
-                  <span className="color-swatch-image"><img src={colorImage} alt={translateProductColor(locale, product.translations, color)} loading="lazy" /></span>
+                  <span className="color-swatch-image"><Image src={colorImage} alt={translateProductColor(locale, product.translations, color)} fill sizes="64px" loading="lazy" style={{ objectFit: "cover" }} /></span>
                   <span className="color-swatch-label">{translateProductColor(locale, product.translations, color)}</span>
                 </button>;
               })}
@@ -324,7 +325,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         <button type="button" className="primary-button" onClick={handleBackToProducts}>{t("Volver a productos")}</button>
       </div>
       <ContactButton />
-      {zoomOpen ? <div className="image-lightbox" role="dialog" aria-modal="true" style={{ touchAction: "pan-y" }} {...swipeHandlers} aria-label={t("Vista previa de la imagen del producto")} onClick={() => setZoomOpen(false)}><button type="button" aria-label={t("Cerrar vista previa de la imagen")} onClick={() => setZoomOpen(false)}>×</button><img src={activeImage} alt={productName} /></div> : null}
+      {zoomOpen ? <div className="image-lightbox" role="dialog" aria-modal="true" style={{ touchAction: "pan-y" }} {...swipeHandlers} aria-label={t("Vista previa de la imagen del producto")} onClick={() => setZoomOpen(false)}><button type="button" aria-label={t("Cerrar vista previa de la imagen")} onClick={() => setZoomOpen(false)}>×</button><Image src={activeImage} alt={productName} fill style={{ objectFit: "contain" }} /></div> : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { formatPrice, type Product } from "@/data/products";
 import { useCart } from "@/components/cart-provider";
 import { useI18n } from "@/components/locale-provider";
@@ -28,7 +29,7 @@ export function ProductCard({ product }: { product: Product }) {
     <article className={`product-card ${isOutOfStock ? "is-out-of-stock" : ""}`}>
       <div className="product-image-wrap">
         <Link href={`/products/${product.slug}`} className="product-image-link" aria-label={`${t("Ver")} ${productName}`}>
-          <img src={product.image} alt={productName} />
+          <Image src={product.image} alt={productName} fill sizes="(max-width: 640px) 50vw, 25vw" style={{ objectFit: "cover" }} />
         </Link>
         <div className="product-card-topline">
           {product.badge ? <span className="badge">{product.badge === "Best Seller" ? t("Más vendido") : product.badge === "Limited" ? t("Edición limitada") : product.badge}</span> : null}
