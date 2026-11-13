@@ -45,8 +45,6 @@ Para enviar confirmaciones de pedido y avisos de envío, agrega también `RESEND
 
 Para activar límite de solicitudes global entre instancias de Vercel, crea una base de datos Redis en Upstash y configura `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` en Vercel. Sin estas variables, el sitio conserva un límite de seguridad local por instancia.
 
-Para monitorear errores de producción con Sentry, crea un proyecto Next.js en Sentry y configura su DSN como `NEXT_PUBLIC_SENTRY_DSN` en Vercel. Sin este valor, el monitoreo queda desactivado sin afectar el sitio.
-
 El procedimiento de respaldo, recuperación y simulacros está en [docs/backup-recovery.md](docs/backup-recovery.md). Los respaldos de base de datos no incluyen los archivos del bucket de Storage, por lo que las imágenes deben conservarse por separado.
 
 El procedimiento para identificar y reparar pedidos históricos incompletos está en [docs/order-reconciliation.md](docs/order-reconciliation.md).

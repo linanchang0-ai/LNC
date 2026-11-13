@@ -21,7 +21,7 @@
 2. On the Free plan, create a logical export regularly with the Supabase CLI `db dump` command. Store the output in an encrypted location outside Supabase and Vercel.
 3. Keep the migration files in `supabase/migrations` in Git. They are the schema history and must be restored before application traffic is enabled.
 4. Export or retain product images from the `product-images` Storage bucket separately. Database backups only retain Storage metadata, not deleted object contents.
-5. Never commit database dumps, environment files, PayPal credentials, or Resend/Upstash/Sentry keys to Git.
+5. Never commit database dumps, environment files, PayPal credentials, or Resend/Upstash keys to Git.
 
 ## Restore Drill
 
