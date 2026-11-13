@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { ProductTranslations } from "@/lib/product-translations";
 import { getShippingCost } from "@/lib/shipping";
+import { fetchCatalogProducts } from "@/lib/catalog-client";
 
 export type CartItem = {
   id: string | number;
@@ -59,10 +60,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (!Array.isArray(parsed)) return;
       // Muestra de inmediato el carrito guardado; después se valida contra el catálogo.
       startTransition(() => setItems(parsed));
-      void fetch("/api/products")
-        .then(async (response) => response.ok ? await response.json() as { items?: Array<{ databaseId?: string; id: string | number }> } : null)
+      void fetchCatalogProducts()
         .then((catalog) => {
-          const availableIds = new Set((catalog?.items ?? []).map((product) => String(product.databaseId ?? product.id)));
+          const availableIds = new Set(catalog.map((product) => String(product.databaseId ?? product.id)));
           startTransition(() => setItems(parsed.filter((item) => availableIds.has(String(item.id)))));
         })
         .catch(() => startTransition(() => setItems(parsed)));

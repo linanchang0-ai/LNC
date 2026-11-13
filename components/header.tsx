@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 import { siteConfig } from "@/lib/site-config";
 import { translateProductColor, translateProductField, translateText } from "@/lib/i18n";
 import { normalizeSearchText } from "@/lib/text";
+import { fetchCatalogProducts } from "@/lib/catalog-client";
 
 const desktopNav = [
   { href: "/shop", label: "Comprar" },
@@ -80,10 +81,7 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/products").then(async (response) => {
-      const data = await response.json() as { items?: Product[] };
-      if (response.ok && data.items) setProducts(data.items);
-    }).catch(() => undefined);
+    fetchCatalogProducts().then((items) => setProducts(items)).catch(() => undefined);
   }, []);
 
   const redeemCoupon = async () => {

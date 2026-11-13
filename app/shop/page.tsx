@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { categories as fallbackCategories, type Category, type Product } from "@/data/products";
 import { ProductCard } from "@/components/product-card";
 import { useI18n } from "@/components/locale-provider";
+import { fetchCatalogProducts } from "@/lib/catalog-client";
 
 export default function ShopPage() {
   const { t } = useI18n();
@@ -16,12 +17,7 @@ export default function ShopPage() {
   const [price, setPrice] = useState("all");
   const [sort, setSort] = useState("featured");
   useEffect(() => {
-    fetch("/api/products").then(async (response) => {
-      if (!response.ok) throw new Error("No se pudieron cargar los productos.");
-      const data = await response.json() as { items?: Product[] };
-      if (!Array.isArray(data.items)) throw new Error("La respuesta de productos no es válida.");
-      setProducts(data.items);
-    }).catch(() => setProductsLoadFailed(true)).finally(() => setProductsLoaded(true));
+    fetchCatalogProducts().then(setProducts).catch(() => setProductsLoadFailed(true)).finally(() => setProductsLoaded(true));
     fetch("/api/categories").then(async (response) => {
       const data = await response.json() as { items?: Category[] };
       if (response.ok && data.items) setCategories(data.items);
