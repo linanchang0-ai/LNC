@@ -39,6 +39,9 @@ yarn-error.log*
 # Supabase CLI local state
 /supabase/.temp/
 
+# 图片原图备份（批量压缩前的本地留档）
+/image-backup/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
