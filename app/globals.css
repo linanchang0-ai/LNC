@@ -3007,6 +3007,8 @@ th {
     z-index: 100;
     isolation: isolate;
     background: var(--background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .site-header.is-scrolled {
