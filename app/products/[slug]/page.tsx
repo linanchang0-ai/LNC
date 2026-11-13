@@ -181,6 +181,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <div className="gallery-thumbnails">
             {product.gallery.map((image, index) => <button type="button" key={`${product.slug}-${index}`} className={activeImage === image ? "is-active" : ""} onClick={() => selectImage(image)} aria-label={`${t("Ver imagen")} ${index + 1} ${t("de")} ${productName}`}><img src={image} alt={`${productName} ${t("miniatura")} ${index + 1}`} /></button>)}
           </div>
+          {activeDetailImages.length ? (
+            <div className="gallery-detail-list">
+              <h3 className="gallery-detail-title">{t("Detalles del producto")}</h3>
+              {activeDetailImages.map((image, index) => <img key={`${product.slug}-detail-${selectedColor}-${index}`} src={image} alt={`${productName} ${t("detalle")} ${index + 1}`} loading="lazy" />)}
+            </div>
+          ) : null}
         </div>
 
         <aside className="detail-panel">
@@ -300,12 +306,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           ))}
         </ul>
       </section>
-      {activeDetailImages.length ?       <section className="product-detail-images" aria-label={t("Detalles del producto")}>
-        <h2 className="section-title">{t("Detalles del producto")}</h2>
-        <div>
-          {activeDetailImages.map((image, index) => <img key={`${product.slug}-detail-${selectedColor}-${index}`} src={image} alt={`${productName} ${t("detalle")} ${index + 1}`} loading="lazy" />)}
-        </div>
-      </section> : null}
       <TrustSignals />
 
       <section className="section">
