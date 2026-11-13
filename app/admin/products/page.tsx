@@ -5,7 +5,7 @@ import { useAdminResource } from "@/components/admin-data-loader";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { normalizeProductTranslations, type ProductTranslationLocale, type ProductTranslationTextField, type ProductTranslations } from "@/lib/product-translations";
 import { translateText } from "@/lib/i18n";
-import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +129,8 @@ export default function AdminProductsPage() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pendingPrimaryImages, setPendingPrimaryImages] = useState<File[]>([]);
+  const [dragDetail, setDragDetail] = useState<{ color: string; index: number } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ color: string; index: number } | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryZh, setNewCategoryZh] = useState("");
   const [categorySaving, setCategorySaving] = useState(false);
@@ -218,6 +220,46 @@ export default function AdminProductsPage() {
       list.splice(toIndex, 0, image);
       return { ...current, detailImagesByColor: { ...current.detailImagesByColor, [color]: list } };
     });
+  };
+
+  const handleDetailDragStart = (color: string, index: number, event: DragEvent<HTMLDivElement>) => {
+    if (uploading || saving) {
+      event.preventDefault();
+      return;
+    }
+    setDragDetail({ color, index });
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", JSON.stringify({ color, index }));
+  };
+
+  const handleDetailDragOver = (color: string, index: number, event: DragEvent<HTMLDivElement>) => {
+    if (!dragDetail || dragDetail.color !== color) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (dragDetail.index !== index) setDropTarget({ color, index });
+  };
+
+  const handleDetailDrop = (color: string, index: number, event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    let source = dragDetail;
+    const raw = event.dataTransfer.getData("text/plain");
+    if (raw) {
+      try {
+        source = JSON.parse(raw) as { color: string; index: number };
+      } catch {
+        source = dragDetail;
+      }
+    }
+    if (source && source.color === color && source.index !== index) {
+      moveColorDetailImage(color, source.index, index);
+    }
+    setDragDetail(null);
+    setDropTarget(null);
+  };
+
+  const handleDetailDragEnd = () => {
+    setDragDetail(null);
+    setDropTarget(null);
   };
 
   const uploadImages = async (files: FileList | File[], target: "primary" | "detail", color?: string) => {
@@ -511,10 +553,19 @@ export default function AdminProductsPage() {
                         <label className={`product-image-upload-button${uploading ? " is-disabled" : ""}`}>{uploading ? "正在上传..." : draft.colorImages[color] ? "更换主图" : "上传主图"}<input className="product-image-file-input" type="file" accept="image/*" disabled={uploading} onChange={(event) => handleFileChange(event, "primary", color)} /></label>
                         <div className="color-detail-images">
                           <strong>详情图</strong>
+                          <p className="product-image-order-help">可直接拖拽缩略图调整顺序，也可用下方 ↑↓ 按钮微调。</p>
                           <div className="product-image-strip-row">
                             <div className="product-image-strip" aria-label={`${color} 详情图`}>
                               {colorDetailList.map((image, index) => (
-                                <div className="product-image-item" key={`${image}-${index}`}>
+                                <div
+                                  className={`product-image-item is-draggable${dragDetail?.color === color && dragDetail.index === index ? " is-dragging" : ""}${dropTarget?.color === color && dropTarget.index === index ? " is-drop-target" : ""}`}
+                                  key={`${image}-${index}`}
+                                  draggable={!(uploading || saving)}
+                                  onDragStart={(event) => handleDetailDragStart(color, index, event)}
+                                  onDragOver={(event) => handleDetailDragOver(color, index, event)}
+                                  onDrop={(event) => handleDetailDrop(color, index, event)}
+                                  onDragEnd={handleDetailDragEnd}
+                                >
                                   <div className="product-image-thumb"><img src={image} alt={`${draft.name} ${color} 详情图 ${index + 1}`} draggable={false} /><button type="button" className="product-image-remove" onClick={() => removeColorDetailImage(color, index)} aria-label={`删除${color}详情图 ${index + 1}`} title={`删除详情图`}>×</button></div>
                                   <div className="product-image-order">
                                     <button type="button" onClick={() => moveColorDetailImage(color, index, index - 1)} disabled={index === 0 || uploading || saving} aria-label={`${color}详情图 ${index + 1} 上移`} title="上移">↑</button>
