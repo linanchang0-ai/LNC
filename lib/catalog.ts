@@ -1,5 +1,6 @@
 import { categories as fallbackCategories, products, type Category, type Product } from "@/data/products";
 import { createAdminDataClient } from "@/lib/admin-auth";
+import { sortCategoriesForDisplay } from "@/lib/category-order";
 import { normalizeProductTranslations } from "@/lib/product-translations";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
@@ -52,16 +53,18 @@ async function loadCatalogCategories(): Promise<Category[]> {
   if (error) return useDemoCatalog ? fallbackCategories : [];
   if (!data) return [];
 
-  return (data as CategoryRow[]).map((category) => {
-    const fallback = fallbackCategories.find((item) => item.slug === category.slug);
-    return {
-      slug: category.slug,
-      name: category.name,
-      label: category.description || fallback?.label || `Explora nuestra colección de ${category.name}.`,
-      description: category.description || fallback?.description || `Productos seleccionados en ${category.name}.`,
-      image: category.image_url || fallback?.image || "",
-    };
-  });
+  return sortCategoriesForDisplay(
+    (data as CategoryRow[]).map((category) => {
+      const fallback = fallbackCategories.find((item) => item.slug === category.slug);
+      return {
+        slug: category.slug,
+        name: category.name,
+        label: category.description || fallback?.label || `Explora nuestra colección de ${category.name}.`,
+        description: category.description || fallback?.description || `Productos seleccionados en ${category.name}.`,
+        image: category.image_url || fallback?.image || "",
+      };
+    })
+  );
 }
 
 export async function getCatalogCategories(): Promise<Category[]> {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminAuthClient, createAdminDataClient, getAdminRole, type AdminRole } from "@/lib/admin-auth";
+import { sortCategoriesForDisplay } from "@/lib/category-order";
 import { sendContactReply, sendShippingNotification } from "@/lib/email";
 import { signShippingLabel } from "@/lib/shipping-labels";
 import { normalizeProductTranslations, type ProductTranslations } from "@/lib/product-translations";
@@ -148,7 +149,10 @@ export async function GET(request: Request) {
       categoryError = fallbackResult.error;
     }
     if (categoryError) return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
-    return NextResponse.json({ items: categoryRows ?? [] });
+    const sortedRows = sortCategoriesForDisplay(
+      (categoryRows ?? []) as unknown as { slug: string; name: string }[]
+    );
+    return NextResponse.json({ items: sortedRows });
   }
 
   if (!resource || !(resource in queries)) return NextResponse.json({ error: "未找到对应资源。" }, { status: 404 });
