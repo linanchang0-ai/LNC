@@ -5,6 +5,7 @@ import { useAdminResource } from "@/components/admin-data-loader";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { normalizeProductTranslations, type ProductTranslationLocale, type ProductTranslationTextField, type ProductTranslations } from "@/lib/product-translations";
 import { translateText } from "@/lib/i18n";
+import { normalizeSearchText } from "@/lib/text";
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from "react";
 
 export const dynamic = "force-dynamic";
@@ -136,6 +137,7 @@ export default function AdminProductsPage() {
   const [categorySaving, setCategorySaving] = useState(false);
   const [categoryExpanded, setCategoryExpanded] = useState(false);
   const [expandedProductCategories, setExpandedProductCategories] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const editorOpen = creating || editingId !== null;
   useEffect(() => {
     const dialog = editorDialogRef.current;
@@ -153,12 +155,25 @@ export default function AdminProductsPage() {
     if (!category) return "未分类";
     return category.name_zh?.trim() || translateText("zh", category.name);
   };
-  const productGroups = Array.from(new Set(products.map((product) => product.category || "uncategorized"))).map((categorySlug) => {
+  const normalizedSearch = normalizeSearchText(searchQuery);
+  const productSearchText = (product: AdminProduct) => {
+    const translation = normalizeProductTranslations(product.translations) ?? {};
+    return [
+      product.name,
+      translation.zh?.name,
+      translation.en?.name,
+      categoryLabel(categoryBySlug(product.category)),
+    ].map((text) => normalizeSearchText(text)).join(" ");
+  };
+  const visibleProducts = normalizedSearch
+    ? products.filter((product) => productSearchText(product).includes(normalizedSearch))
+    : products;
+  const productGroups = Array.from(new Set(visibleProducts.map((product) => product.category || "uncategorized"))).map((categorySlug) => {
     const resolvedCategory = categoryBySlug(categorySlug);
     return {
       slug: categorySlug,
       name: resolvedCategory ? categoryLabel(resolvedCategory) : (categorySlug === "uncategorized" ? "未分类" : categorySlug),
-      products: products.filter((product) => (product.category || "uncategorized") === categorySlug),
+      products: visibleProducts.filter((product) => (product.category || "uncategorized") === categorySlug),
     };
   });
   const isProductCategoryExpanded = (categorySlug: string) => expandedProductCategories.includes(categorySlug);
@@ -470,8 +485,19 @@ export default function AdminProductsPage() {
       </section>
 
       <div className="admin-panel">
+        <div className="admin-search-bar">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="搜索商品：西语名称、中文/英文译名或分类"
+            aria-label="搜索商品"
+          />
+          {searchQuery.trim() ? <button className="small-button" type="button" onClick={() => setSearchQuery("")}>清除</button> : null}
+          {normalizedSearch ? <span className="muted">匹配 {visibleProducts.length} 件商品</span> : null}
+        </div>
         {productGroups.map((group) => {
-          const expanded = isProductCategoryExpanded(group.slug);
+          const expanded = searchQuery.trim() ? true : isProductCategoryExpanded(group.slug);
           return <section className="admin-product-category" key={group.slug}>
             <button type="button" className="admin-category-toggle" aria-expanded={expanded} onClick={() => toggleProductCategory(group.slug)}>
               <span>{group.name}（{group.products.length}）</span><span>{expanded ? "收起 ▲" : "展开 ▼"}</span>
@@ -522,6 +548,7 @@ export default function AdminProductsPage() {
           </section>;
         })}
         {!loading && products.length === 0 ? <p className="muted">暂无商品。</p> : null}
+        {!loading && normalizedSearch && visibleProducts.length === 0 ? <p className="muted">没有匹配“{searchQuery.trim()}”的商品。</p> : null}
         {error ? <p className="error-box">{error}</p> : null}
         {saveError ? <p className="error-box">{saveError}</p> : null}
         {editorOpen ? <dialog ref={editorDialogRef} className="admin-product-modal-dialog" aria-labelledby="admin-product-editor-title" onCancel={(event) => { if (event.target === event.currentTarget) event.preventDefault(); }} onClick={(event) => { if (event.target === event.currentTarget) closeEditor(); }}>

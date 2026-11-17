@@ -195,6 +195,28 @@ a.stats-card:hover {
   margin: 0 0 16px;
 }
 
+.admin-search-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-search-bar input {
+  flex: 1 1 240px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.82rem 0.9rem;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--stone-900);
+}
+
+.admin-search-bar .muted {
+  margin: 0;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
