@@ -70,6 +70,7 @@ export function Header() {
   const [coupon, setCoupon] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchStatus, setSearchStatus] = useState<"idle" | "ready" | "error">("idle");
   const searchResults = products.filter((product) => normalizeSearchText(`${product.name} ${translateProductField(locale, product.translations, "name", product.name)} ${product.category} ${t(product.category)} ${product.shortDescription} ${translateProductField(locale, product.translations, "shortDescription", product.shortDescription)}`).includes(normalizeSearchText(searchTerm))).slice(0, 6);
 
   useEffect(() => {
@@ -81,8 +82,20 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    fetchCatalogProducts().then((items) => setProducts(items)).catch(() => undefined);
-  }, []);
+    if (!searchOpen || searchStatus !== "idle") return;
+    fetchCatalogProducts().then((items) => {
+      setProducts(items);
+      setSearchStatus("ready");
+    }).catch((error: unknown) => {
+      console.error("Could not load products for search.", error);
+      setSearchStatus("error");
+    });
+  }, [searchOpen, searchStatus]);
+
+  const openSearch = () => {
+    if (searchStatus === "error") setSearchStatus("idle");
+    setSearchOpen(true);
+  };
 
   const redeemCoupon = async () => {
     const code = coupon.trim();
@@ -182,7 +195,7 @@ export function Header() {
           </nav>
 
           <div className="header-actions">
-            <button type="button" className="header-link search-link" aria-label={t("Buscar")} onClick={() => setSearchOpen(true)}>
+            <button type="button" className="header-link search-link" aria-label={t("Buscar")} onClick={openSearch}>
               {t("Buscar")}
             </button>
             <Link href="/login" className="header-link" aria-label={t("Cuenta")}>
@@ -198,7 +211,7 @@ export function Header() {
           </div>
 
           <div className="mobile-header-actions">
-            <button type="button" className="mobile-search-button" onClick={() => setSearchOpen(true)} aria-label={t("Buscar")}>
+            <button type="button" className="mobile-search-button" onClick={openSearch} aria-label={t("Buscar")}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="11" cy="11" r="6.5" />
                 <path d="m16 16 4 4" />
@@ -274,7 +287,7 @@ export function Header() {
           <div className="search-overlay-top"><span>{t("Buscar")}</span><button type="button" onClick={() => setSearchOpen(false)} aria-label={t("Cerrar búsqueda")}>×</button></div>
           <input autoFocus={searchOpen} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder={t("Buscar productos...")} />
           <div className="search-results">
-            {!searchTerm ? <p>{t("Busca por nombre o categoría.")}</p> : searchResults.length === 0 ? <p>{t("No encontramos productos.")}</p> : searchResults.map((product) => <Link key={product.id} href={`/products/${product.slug}`} onClick={() => setSearchOpen(false)}><img src={product.image} alt="" /><span><strong>{translateProductField(locale, product.translations, "name", product.name)}</strong><small>{formatPrice(product.price)}</small></span></Link>)}
+            {searchStatus === "error" ? <p role="alert">{t("No pudimos cargar los productos. Inténtalo de nuevo más tarde.")}</p> : !searchTerm ? <p>{t("Busca por nombre o categoría.")}</p> : searchStatus === "idle" ? <p role="status">{t("Cargando productos...")}</p> : searchResults.length === 0 ? <p>{t("No encontramos productos.")}</p> : searchResults.map((product) => <Link key={product.id} href={`/products/${product.slug}`} onClick={() => setSearchOpen(false)}><img src={product.image} alt="" /><span><strong>{translateProductField(locale, product.translations, "name", product.name)}</strong><small>{formatPrice(product.price)}</small></span></Link>)}
           </div>
         </div>
       </div>

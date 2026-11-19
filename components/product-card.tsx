@@ -29,7 +29,7 @@ export function ProductCard({ product }: { product: Product }) {
     <article className={`product-card ${isOutOfStock ? "is-out-of-stock" : ""}`}>
       <div className="product-image-wrap">
         <Link href={`/products/${product.slug}`} className="product-image-link" aria-label={`${t("Ver")} ${productName}`}>
-          <Image src={product.image} alt={productName} fill sizes="(max-width: 640px) 50vw, 25vw" style={{ objectFit: "cover" }} />
+          <Image src={product.image} alt={productName} fill sizes="(max-width: 1023px) 50vw, (max-width: 1199px) 33vw, 295px" style={{ objectFit: "cover" }} />
         </Link>
         <div className="product-card-topline">
           {product.badge ? <span className="badge">{product.badge === "Best Seller" ? t("Más vendido") : product.badge === "Limited" ? t("Edición limitada") : product.badge}</span> : null}

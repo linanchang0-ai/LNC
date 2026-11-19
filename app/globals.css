@@ -1566,6 +1566,7 @@ th {
 
 .category-button-image {
   display: block;
+  position: relative;
   overflow: hidden;
   aspect-ratio: 1.55 / 1;
   background: var(--secondary-bg);
@@ -1682,6 +1683,7 @@ th {
 }
 
 .homepage-carousel-image {
+  position: relative;
   flex: 0 0 100%;
 }
 

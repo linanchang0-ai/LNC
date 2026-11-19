@@ -68,6 +68,7 @@ const translations: Record<string, Partial<Record<Locale, string>>> = {
   "Buscar productos...": { en: "Search products...", zh: "搜索商品..." },
   "Busca por nombre o categoría.": { en: "Search by name or category.", zh: "按名称或类别搜索。" },
   "No encontramos productos.": { en: "No products found.", zh: "没有找到商品。" },
+  "Cargando productos...": { en: "Loading products...", zh: "正在加载商品…" },
   "Añadido a tu carrito": { en: "Added to your cart", zh: "已加入购物车" },
   "Tu selección": { en: "Your selection", zh: "您的选择" },
   "Tu carrito está vacío.": { en: "Your cart is empty.", zh: "购物车为空。" },

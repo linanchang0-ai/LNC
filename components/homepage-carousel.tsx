@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState, type PointerEvent, type TransitionEvent } from "react";
 import type { HomepageSlide } from "@/lib/homepage-slides";
+import { canOptimizeImage } from "@/lib/image-hosts";
 import { TimeAwareHero } from "@/components/time-aware-hero";
 import { useI18n } from "@/components/locale-provider";
 
@@ -107,11 +109,14 @@ function HomepageCarouselTrack({ slides, intervalSeconds }: { slides: HomepageSl
           {displaySlides.map((slide, index) => {
             const isClone = hasMultipleSlides && (index === 0 || index === displaySlides.length - 1);
             const image = (
-              <img
+              <Image
                 src={slide.image_url}
                 alt={slide.alt_text}
-                fetchPriority={index === trackIndex ? "high" : "auto"}
-                loading={index === trackIndex ? "eager" : "lazy"}
+                fill
+                sizes="(max-width: 1204px) calc(100vw - 24px), 1180px"
+                unoptimized={!canOptimizeImage(slide.image_url)}
+                fetchPriority={index === (hasMultipleSlides ? 1 : 0) ? "high" : "auto"}
+                loading={index === (hasMultipleSlides ? 1 : 0) ? "eager" : "lazy"}
                 draggable={false}
               />
             );

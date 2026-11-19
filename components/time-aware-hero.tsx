@@ -55,17 +55,6 @@ export function TimeAwareHero() {
   }, []);
 
   useEffect(() => {
-    const preload = window.setTimeout(() => {
-      Object.entries(moments).forEach(([moment, sources]) => {
-        if (moment === currentMoment) return;
-        const image = new Image();
-        image.src = window.matchMedia("(max-width: 767px)").matches ? sources.mobile : sources.desktop;
-      });
-    }, 1_500);
-    return () => window.clearTimeout(preload);
-  }, [currentMoment]);
-
-  useEffect(() => {
     if (!previousMoment) return;
     const removePrevious = window.setTimeout(() => setPreviousMoment(null), 1_200);
     return () => window.clearTimeout(removePrevious);
