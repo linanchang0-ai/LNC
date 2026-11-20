@@ -99,6 +99,8 @@ export default function AdminProductsPage() {
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [featuredSavingId, setFeaturedSavingId] = useState<string | null>(null);
+  const [featuredError, setFeaturedError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [pendingPrimaryImages, setPendingPrimaryImages] = useState<File[]>([]);
   const [dragDetail, setDragDetail] = useState<{ color: string; index: number } | null>(null);
@@ -155,8 +157,22 @@ export default function AdminProductsPage() {
     setExpandedProductCategories((current) => current.includes(categorySlug) ? current.filter((slug) => slug !== categorySlug) : [...current, categorySlug]);
   };
   const toggleFeatured = async (id: string, featured: boolean) => {
-    const response = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, featured: !featured }) });
-    if (response.ok) setItems((current) => current.map((product) => product.id === id ? { ...product, featured: !featured } : product));
+    if (featuredSavingId) return;
+    setFeaturedSavingId(id);
+    setFeaturedError("");
+    try {
+      const response = await fetch("/api/admin", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, featured: !featured }) });
+      const data = await response.json() as { item?: AdminProduct; error?: string };
+      if (!response.ok || !data.item || typeof data.item.featured !== "boolean") {
+        throw new Error(data.error ?? "精选状态更新失败，请重试。");
+      }
+      const updatedProduct = data.item;
+      setItems((current) => current.map((product) => product.id === id ? { ...product, featured: updatedProduct.featured } : product));
+    } catch (featuredSaveError) {
+      setFeaturedError(featuredSaveError instanceof Error ? featuredSaveError.message : "精选状态更新失败，请重试。");
+    } finally {
+      setFeaturedSavingId(null);
+    }
   };
 
   const beginEditing = (product: AdminProduct) => {
@@ -502,6 +518,7 @@ export default function AdminProductsPage() {
           {searchQuery.trim() ? <button className="small-button" type="button" onClick={() => setSearchQuery("")}>清除</button> : null}
           {normalizedSearch ? <span className="muted">匹配 {visibleProducts.length} 件商品</span> : null}
         </div>
+        {featuredError ? <p className="error-box" role="alert">{featuredError}</p> : null}
         {productGroups.map((group) => {
           const expanded = searchQuery.trim() ? true : isProductCategoryExpanded(group.slug);
           return <section className="admin-product-category" key={group.slug}>
@@ -522,8 +539,8 @@ export default function AdminProductsPage() {
                   <td>{product.inventory_quantity ?? 0}</td>
                   <td><span className="status-pill">{product.is_published ? "已发布" : "草稿"}</span></td>
                   <td>
-                    <button className="small-button" onClick={() => toggleFeatured(product.id, product.featured)}>
-                      {product.featured ? "取消精选" : "设为精选"}
+                    <button className="small-button" type="button" onClick={() => void toggleFeatured(product.id, product.featured)} disabled={featuredSavingId !== null}>
+                      {featuredSavingId === product.id ? "正在保存..." : product.featured ? "取消精选" : "设为精选"}
                     </button>
                   </td>
                   <td><button className="small-button" type="button" onClick={() => void togglePublished(product)} disabled={publishingId === product.id}>{publishingId === product.id ? "正在更新..." : product.is_published ? "下架" : "发布"}</button><button className="small-button" type="button" onClick={() => void deleteProduct(product)} disabled={publishingId === product.id}>删除</button><button className="small-button" type="button" onClick={() => beginEditing(product)}>编辑</button></td>
@@ -546,7 +563,7 @@ export default function AdminProductsPage() {
                 <span className="mobile-admin-product-chevron" aria-hidden="true" />
                 <span className="mobile-admin-product-summary-data"><span>{formatPrice(product.price)}</span><span>库存 {product.inventory_quantity ?? 0}</span></span>
               </summary>
-              <div className="mobile-admin-product-actions"><button className="ghost-button" type="button" onClick={() => void togglePublished(product)} disabled={publishingId === product.id}>{publishingId === product.id ? "正在更新..." : product.is_published ? "下架" : "发布"}</button><button className="ghost-button" type="button" onClick={() => void toggleFeatured(product.id, product.featured)} disabled={publishingId === product.id}>{product.featured ? "取消精选" : "设为精选"}</button><button className="ghost-button mobile-admin-delete" type="button" onClick={() => void deleteProduct(product)} disabled={publishingId === product.id}>删除</button><button className="small-button" type="button" onClick={() => beginEditing(product)}>编辑</button></div>
+              <div className="mobile-admin-product-actions"><button className="ghost-button" type="button" onClick={() => void togglePublished(product)} disabled={publishingId === product.id}>{publishingId === product.id ? "正在更新..." : product.is_published ? "下架" : "发布"}</button><button className="ghost-button" type="button" onClick={() => void toggleFeatured(product.id, product.featured)} disabled={publishingId === product.id || featuredSavingId !== null}>{featuredSavingId === product.id ? "正在保存..." : product.featured ? "取消精选" : "设为精选"}</button><button className="ghost-button mobile-admin-delete" type="button" onClick={() => void deleteProduct(product)} disabled={publishingId === product.id}>删除</button><button className="small-button" type="button" onClick={() => beginEditing(product)}>编辑</button></div>
             </details>;
           })}
               </div>

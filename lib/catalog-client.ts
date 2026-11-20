@@ -5,12 +5,11 @@ import { type Product } from "@/data/products";
 let catalogPromise: Promise<Product[]> | null = null;
 
 /**
- * 同标签页内共享一次商品目录请求：多个组件（头部搜索、收藏、购物车校验、商店页、详情页）
- * 并发调用时复用同一个在途 Promise，避免重复拉取整份目录。失败后清空缓存以便重试。
+ * 多个组件并发调用时复用在途请求，完成后清除缓存以便后续读取最新目录。
  */
 export function fetchCatalogProducts(): Promise<Product[]> {
   if (!catalogPromise) {
-    catalogPromise = fetch("/api/products")
+    catalogPromise = fetch("/api/products", { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json() as { items?: Product[] };
         if (!response.ok || !Array.isArray(data.items)) {
@@ -18,9 +17,8 @@ export function fetchCatalogProducts(): Promise<Product[]> {
         }
         return data.items;
       })
-      .catch((error) => {
+      .finally(() => {
         catalogPromise = null;
-        throw error;
       });
   }
   return catalogPromise;

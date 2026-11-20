@@ -69,7 +69,7 @@ async function FeaturedProducts({ products, locale }: { products: Promise<Produc
 }
 
 export default async function HomePage() {
-  const products = getCatalogProducts();
+  const products = getCatalogProducts({ fresh: true });
   const categories = getCatalogCategories();
   const slides = getHomepageSlides();
   const interval = getHomepageCarouselIntervalSeconds();

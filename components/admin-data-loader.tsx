@@ -10,7 +10,7 @@ export function useAdminResource<T>(resource: string) {
   const load = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin?resource=${resource}`);
+      const response = await fetch(`/api/admin?resource=${resource}`, { cache: "no-store" });
       const data = await response.json() as { items?: T[]; error?: string };
       if (!response.ok) throw new Error(data.error ?? "数据加载失败。");
       setItems(data.items ?? []);
@@ -26,7 +26,7 @@ export function useAdminResource<T>(resource: string) {
     let cancelled = false;
     const loadInitialData = async () => {
       try {
-        const response = await fetch(`/api/admin?resource=${resource}`);
+        const response = await fetch(`/api/admin?resource=${resource}`, { cache: "no-store" });
         const data = await response.json() as { items?: T[]; error?: string };
         if (!response.ok) throw new Error(data.error ?? "数据加载失败。");
         if (!cancelled) {

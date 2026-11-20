@@ -144,7 +144,8 @@ async function loadCatalogProducts(): Promise<Product[]> {
   });
 }
 
-export async function getCatalogProducts(): Promise<Product[]> {
+export async function getCatalogProducts(options?: { fresh?: boolean }): Promise<Product[]> {
+  if (options?.fresh) return loadCatalogProducts();
   const now = Date.now();
   if (productsCache && now - productsCache.at < CATALOG_CACHE_TTL_MS) {
     return productsCache.promise;

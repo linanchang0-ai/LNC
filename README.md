@@ -60,6 +60,7 @@ Para ordenar las categorías, aplica la migración `20261120110000_add_category_
 El catálogo público obtiene todos los productos publicados en páginas de la base de datos, sin limitarse a los primeros 1.000 resultados. Los productos en borrador permanecen visibles únicamente en el panel.
 
 La página de inicio muestra hasta 30 productos publicados que estén marcados como destacados en el panel.
+Al actualizar un destacado, vuelve a cargar la página de inicio para ver la selección actualizada.
 
 Al subir imágenes JPEG de productos desde el panel, el navegador las reduce a un máximo de 1600 píxeles de ancho y 8000 de alto y usa calidad 80, siempre que el resultado sea más pequeño. Las imágenes PNG, WebP y GIF compatibles de hasta 7 MB se conservan sin cambios para no perder transparencia o animación. Guarda los originales por separado.
 

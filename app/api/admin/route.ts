@@ -125,7 +125,7 @@ export async function GET(request: Request) {
       items.push(...page);
       if (page.length < pageSize) break;
     }
-    return NextResponse.json({ items });
+    return NextResponse.json({ items }, { headers: { "Cache-Control": "no-store" } });
   }
 
   const queries = {
