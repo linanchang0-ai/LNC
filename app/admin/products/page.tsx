@@ -6,15 +6,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { normalizeProductTranslations, type ProductTranslationLocale, type ProductTranslationTextField, type ProductTranslations } from "@/lib/product-translations";
 import { translateText } from "@/lib/i18n";
 import { normalizeSearchText } from "@/lib/text";
+import { prepareProductImage } from "@/lib/prepare-product-image";
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type PointerEvent } from "react";
 
 export const dynamic = "force-dynamic";
 
 type AdminProduct = { id: string; name: string; category: string | null; price: number; shipping_fee: number | null; inventory_quantity: number | null; short_description: string | null; description: string | null; translations: unknown; materials: unknown; dimensions: string | null; colors: unknown; size_options: unknown; featured: boolean; is_published: boolean; image_url: string | null; color_images: unknown; color_prices: unknown; gallery: unknown; detail_images_by_color: unknown };
 type AdminCategory = { id: string; slug: string; name: string; name_zh?: string | null };
-
-const MAX_UPLOAD_IMAGE_BYTES = 7 * 1024 * 1024;
-const STORAGE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 type SignedImageUpload = { path: string; token: string; url: string };
 type ImageUploadResponse = { uploads?: SignedImageUpload[]; error?: string };
@@ -45,34 +43,6 @@ function toDetailByColor(value: unknown) {
   );
 }
 
-async function prepareImageForUpload(file: File) {
-  if (STORAGE_IMAGE_TYPES.has(file.type) && file.size <= MAX_UPLOAD_IMAGE_BYTES) return file;
-
-  const sourceUrl = URL.createObjectURL(file);
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const element = new Image();
-      element.onload = () => resolve(element);
-      element.onerror = () => reject(new Error("无法读取该图片。请在手机相册中转换为 JPEG 后重试。"));
-      element.src = sourceUrl;
-    });
-    const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
-    const scale = Math.min(1, 2560 / longestSide);
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("当前浏览器无法处理图片。请更新浏览器后重试。");
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const compressed = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
-    if (!compressed || compressed.size > MAX_UPLOAD_IMAGE_BYTES) throw new Error("图片压缩后仍超过 7 MB，请选择较小的图片。");
-    const name = `${file.name.replace(/\.[^.]+$/, "") || "image"}.jpg`;
-    return new File([compressed], name, { type: "image/jpeg" });
-  } finally {
-    URL.revokeObjectURL(sourceUrl);
-  }
-}
-
 async function readImageUploadResponse(response: Response): Promise<ImageUploadResponse> {
   const responseText = await response.text();
   try {
@@ -86,7 +56,8 @@ async function readImageUploadResponse(response: Response): Promise<ImageUploadR
 }
 
 async function uploadProductImages(productId: string, selectedFiles: File[]) {
-  const uploadFiles = await Promise.all(selectedFiles.map(prepareImageForUpload));
+  const uploadFiles: File[] = [];
+  for (const file of selectedFiles) uploadFiles.push(await prepareProductImage(file));
   const response = await fetch("/api/admin/products/images", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
