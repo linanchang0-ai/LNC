@@ -3,6 +3,9 @@ import { imageRemoteHosts } from "./lib/image-hosts";
 
 const nextConfig: NextConfig = {
   images: {
+    // Vercel image optimization can return 402 after its quota is exhausted.
+    // Serve stored images directly so product photos remain visible.
+    unoptimized: true,
     // 仅使用 WebP：iOS 16.0–16.3 的 Safari 误报支持 AVIF，解码失败且不会回退，
     // 会导致手机端图片空白；WebP 自 iOS 14 起稳定支持。
     formats: ["image/webp"],
