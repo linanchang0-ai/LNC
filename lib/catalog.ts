@@ -86,18 +86,30 @@ async function loadCatalogProducts(): Promise<Product[]> {
     fields.replace(", translations", "").replace(", size_options", ""),
     fields.replace(", translations", "").replace(", size_options, stock", ", stock").replace(", color_prices", ""),
   ];
-  const initialResult = await supabase.from("products").select(fields).eq("is_published", true);
-  let data: unknown = initialResult.data;
-  let error = initialResult.error;
-  for (const fallbackFieldsQuery of fallbackFields) {
-    if (error?.code !== "42703") break;
-    const fallbackResult = await supabase.from("products").select(fallbackFieldsQuery).eq("is_published", true);
-    data = fallbackResult.data;
-    error = fallbackResult.error;
+  const rows: CatalogRow[] = [];
+  const pageSize = 500;
+  let selectedFields = fields;
+  for (let from = 0; ; from += pageSize) {
+    const loadPage = (selection: string) => supabase.from("products").select(selection)
+      .eq("is_published", true)
+      .order("created_at", { ascending: true }).order("id", { ascending: true })
+      .range(from, from + pageSize - 1).overrideTypes<CatalogRow[], { merge: false }>();
+    let result = await loadPage(selectedFields);
+    if (from === 0) {
+      for (const fallbackFieldsQuery of fallbackFields) {
+        if (result.error?.code !== "42703") break;
+        selectedFields = fallbackFieldsQuery;
+        result = await loadPage(selectedFields);
+      }
+    }
+    if (result.error) {
+      console.error("Failed to load catalog products:", result.error);
+      throw new Error("Failed to load catalog products.");
+    }
+    const page = result.data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
   }
-  const rows = data as unknown as CatalogRow[] | null;
-  if (error) return useDemoCatalog ? products : [];
-  if (!rows) return [];
 
   return rows.map((row) => {
     const fallback = products.find((product) => product.slug === row.slug);

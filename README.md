@@ -57,6 +57,8 @@ Para administrar el carrusel de inicio, ejecuta también la migración `20261022
 
 Para ordenar las categorías, aplica la migración `20261120110000_add_category_order.sql`. En el panel de productos, las flechas de cada categoría guardan el mismo orden para la tienda y el panel; las categorías nuevas se agregan al final.
 
+El catálogo público obtiene todos los productos publicados en páginas de la base de datos, sin limitarse a los primeros 1.000 resultados. Los productos en borrador permanecen visibles únicamente en el panel.
+
 Al subir imágenes JPEG de productos desde el panel, el navegador las reduce a un máximo de 1600 píxeles de ancho y 8000 de alto y usa calidad 80, siempre que el resultado sea más pequeño. Las imágenes PNG, WebP y GIF compatibles de hasta 7 MB se conservan sin cambios para no perder transparencia o animación. Guarda los originales por separado.
 
 ## Estado actual
