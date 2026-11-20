@@ -102,17 +102,30 @@ export async function GET(request: Request) {
       fields.replace(", size_options", ""),
       fields.replace(", size_options", "").replace(", color_prices", ""),
     ];
-    const initialResult = await supabase.from("products").select(fields).order("created_at", { ascending: false });
-    let data: unknown = initialResult.data;
-    let error = initialResult.error;
-    for (const fallbackQuery of fallbackFields) {
-      if (error?.code !== "42703") break;
-      const fallbackResult = await supabase.from("products").select(fallbackQuery).order("created_at", { ascending: false });
-      data = fallbackResult.data;
-      error = fallbackResult.error;
+    const items: Record<string, unknown>[] = [];
+    const pageSize = 500;
+    let selectedFields = fields;
+    for (let from = 0; ; from += pageSize) {
+      const loadPage = (selection: string) => supabase.from("products").select(selection)
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(from, from + pageSize - 1).overrideTypes<Record<string, unknown>[], { merge: false }>();
+      let result = await loadPage(selectedFields);
+      if (from === 0) {
+        for (const fallbackQuery of fallbackFields) {
+          if (result.error?.code !== "42703") break;
+          selectedFields = fallbackQuery;
+          result = await loadPage(selectedFields);
+        }
+      }
+      if (result.error) {
+        console.error("Failed to load admin products:", result.error);
+        return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
+      }
+      const page = result.data ?? [];
+      items.push(...page);
+      if (page.length < pageSize) break;
     }
-    if (error) return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
-    return NextResponse.json({ items: data ?? [] });
+    return NextResponse.json({ items });
   }
 
   const queries = {
@@ -445,7 +458,7 @@ export async function DELETE(request: Request) {
     if (categoryError || !category) return NextResponse.json({ error: "未找到该分类。" }, { status: 404 });
     const { count, error: usageError } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("category", category.slug);
     if (usageError) return NextResponse.json({ error: "无法检查分类下的商品。" }, { status: 500 });
-    if (count) return NextResponse.json({ error: "该分类下仍有商品，请先调整商品分类后再删除。" }, { status: 409 });
+    if (count) return NextResponse.json({ error: `该分类下仍有 ${count} 件商品（包括未上架商品），请先调整商品分类后再删除。` }, { status: 409 });
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) return NextResponse.json({ error: "分类删除失败。" }, { status: 500 });
     void recordAdminAction(supabase, adminEmail, "deleted", "category", id, { name: category.name, slug: category.slug });
