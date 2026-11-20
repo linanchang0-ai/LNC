@@ -12,7 +12,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type Poi
 export const dynamic = "force-dynamic";
 
 type AdminProduct = { id: string; name: string; category: string | null; price: number; shipping_fee: number | null; inventory_quantity: number | null; short_description: string | null; description: string | null; translations: unknown; materials: unknown; dimensions: string | null; colors: unknown; size_options: unknown; featured: boolean; is_published: boolean; image_url: string | null; color_images: unknown; color_prices: unknown; gallery: unknown; detail_images_by_color: unknown };
-type AdminCategory = { id: string; slug: string; name: string; name_zh?: string | null };
+type AdminCategory = { id: string; slug: string; name: string; name_zh?: string | null; sort_order?: number | null };
 
 type SignedImageUpload = { path: string; token: string; url: string };
 type ImageUploadResponse = { uploads?: SignedImageUpload[]; error?: string };
@@ -106,6 +106,8 @@ export default function AdminProductsPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryZh, setNewCategoryZh] = useState("");
   const [categorySaving, setCategorySaving] = useState(false);
+  const [categoryOrderSaving, setCategoryOrderSaving] = useState(false);
+  const [categoryOrderError, setCategoryOrderError] = useState("");
   const [categoryExpanded, setCategoryExpanded] = useState(false);
   const [expandedProductCategories, setExpandedProductCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -139,6 +141,7 @@ export default function AdminProductsPage() {
   const visibleProducts = normalizedSearch
     ? products.filter((product) => productSearchText(product).includes(normalizedSearch))
     : products;
+  const categoryRanks = new Map(categories.map((category, index) => [category.slug, index]));
   const productGroups = Array.from(new Set(visibleProducts.map((product) => product.category || "uncategorized"))).map((categorySlug) => {
     const resolvedCategory = categoryBySlug(categorySlug);
     return {
@@ -146,7 +149,7 @@ export default function AdminProductsPage() {
       name: resolvedCategory ? categoryLabel(resolvedCategory) : (categorySlug === "uncategorized" ? "未分类" : categorySlug),
       products: visibleProducts.filter((product) => (product.category || "uncategorized") === categorySlug),
     };
-  });
+  }).sort((a, b) => (categoryRanks.get(a.slug) ?? Number.MAX_SAFE_INTEGER) - (categoryRanks.get(b.slug) ?? Number.MAX_SAFE_INTEGER));
   const isProductCategoryExpanded = (categorySlug: string) => expandedProductCategories.includes(categorySlug);
   const toggleProductCategory = (categorySlug: string) => {
     setExpandedProductCategories((current) => current.includes(categorySlug) ? current.filter((slug) => slug !== categorySlug) : [...current, categorySlug]);
@@ -385,7 +388,7 @@ export default function AdminProductsPage() {
       const data = await response.json() as { item?: AdminCategory; error?: string };
       if (!response.ok || !data.item) throw new Error(data.error ?? "分类创建失败。");
       const createdCategory = data.item;
-      setCategories((current) => [...current, createdCategory].sort((first, second) => first.name.localeCompare(second.name)));
+      setCategories((current) => [...current, createdCategory]);
       setNewCategoryName("");
       setNewCategoryZh("");
     } catch (categoryError) {
@@ -402,6 +405,29 @@ export default function AdminProductsPage() {
     const data = await response.json() as { error?: string };
     if (!response.ok) return setSaveError(data.error ?? "分类删除失败。");
     setCategories((current) => current.filter((item) => item.id !== category.id));
+  };
+
+  const moveCategory = async (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= categories.length || categoryOrderSaving || categorySaving) return;
+    const next = [...categories];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    setCategoryOrderSaving(true);
+    setCategoryOrderError("");
+    try {
+      const response = await fetch("/api/admin/categories/order", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: next.map((category) => category.id) }),
+      });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "分类排序保存失败。");
+      setCategories(next.map((category, sort_order) => ({ ...category, sort_order })));
+    } catch (orderError) {
+      setCategoryOrderError(orderError instanceof Error ? orderError.message : "分类排序保存失败。");
+    } finally {
+      setCategoryOrderSaving(false);
+    }
   };
 
   const draftColors = draft.colors.split(",").map((color) => color.trim()).filter(Boolean);
@@ -446,11 +472,20 @@ export default function AdminProductsPage() {
           <div className="field-row category-create-row">
             <div className="field"><label htmlFor="new-category">西语名称（前台显示）</label><input id="new-category" value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder="例如：Camiseta de baloncesto" /></div>
             <div className="field"><label htmlFor="new-category-zh">中文名称（后台显示）</label><input id="new-category-zh" value={newCategoryZh} onChange={(event) => setNewCategoryZh(event.target.value)} placeholder="例如：篮球球衣" /></div>
-            <button className="small-button category-create-button" type="button" onClick={() => void createCategory()} disabled={categorySaving || !newCategoryName.trim()}>{categorySaving ? "正在保存..." : "添加分类"}</button>
+            <button className="small-button category-create-button" type="button" onClick={() => void createCategory()} disabled={categorySaving || categoryOrderSaving || !newCategoryName.trim()}>{categorySaving ? "正在保存..." : "添加分类"}</button>
           </div>
           <div className="filter-bar" aria-label="已有商品分类">
-            {categories.map((category) => <span className="filter-chip" key={category.id}>{categoryLabel(category)} <button type="button" onClick={() => void deleteCategory(category)} aria-label={`删除 ${categoryLabel(category)}`}>×</button></span>)}
+            {categories.map((category, index) => <span className="filter-chip admin-category-chip" key={category.id}>
+              <span>{categoryLabel(category)}</span>
+              <span className="admin-category-actions">
+              <button type="button" onClick={() => void moveCategory(index, -1)} disabled={categorySaving || categoryOrderSaving || index === 0} aria-label={`上移 ${categoryLabel(category)}`}>↑</button>{" "}
+              <button type="button" onClick={() => void moveCategory(index, 1)} disabled={categorySaving || categoryOrderSaving || index === categories.length - 1} aria-label={`下移 ${categoryLabel(category)}`}>↓</button>{" "}
+              <button type="button" onClick={() => void deleteCategory(category)} disabled={categorySaving || categoryOrderSaving} aria-label={`删除 ${categoryLabel(category)}`}>×</button>
+              </span>
+            </span>)}
           </div>
+          {categoryOrderSaving ? <p className="muted" role="status">正在保存分类顺序...</p> : null}
+          {categoryOrderError ? <p className="error-box" role="alert">{categoryOrderError}</p> : null}
           {categoriesError ? <p className="error-box">{categoriesError}</p> : null}
         </div> : null}
       </section>

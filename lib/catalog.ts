@@ -37,6 +37,7 @@ type CategoryRow = {
   name: string;
   description: string | null;
   image_url: string | null;
+  sort_order: number | null;
 };
 
 const useDemoCatalog = process.env.NODE_ENV === "development";
@@ -44,42 +45,31 @@ const useDemoCatalog = process.env.NODE_ENV === "development";
 const CATALOG_CACHE_TTL_MS = 120_000;
 type CatalogCacheEntry<T> = { at: number; promise: Promise<T> };
 let productsCache: CatalogCacheEntry<Product[]> | null = null;
-let categoriesCache: CatalogCacheEntry<Category[]> | null = null;
 
 async function loadCatalogCategories(): Promise<Category[]> {
   const supabase = getSupabaseServerClient();
   if (!supabase) return useDemoCatalog ? fallbackCategories : [];
-  const { data, error } = await supabase.from("categories").select("slug, name, description, image_url").order("name");
-  if (error) return useDemoCatalog ? fallbackCategories : [];
+  const { data, error } = await supabase.from("categories").select("slug, name, description, image_url, sort_order").order("name");
+  if (error) {
+    console.error("Failed to load catalog categories:", error);
+    throw new Error("Failed to load catalog categories.");
+  }
   if (!data) return [];
 
-  return sortCategoriesForDisplay(
-    (data as CategoryRow[]).map((category) => {
-      const fallback = fallbackCategories.find((item) => item.slug === category.slug);
-      return {
-        slug: category.slug,
-        name: category.name,
-        label: category.description || fallback?.label || `Explora nuestra colección de ${category.name}.`,
-        description: category.description || fallback?.description || `Productos seleccionados en ${category.name}.`,
-        image: category.image_url || fallback?.image || "",
-      };
-    })
-  );
+  return sortCategoriesForDisplay(data as CategoryRow[]).map((category) => {
+    const fallback = fallbackCategories.find((item) => item.slug === category.slug);
+    return {
+      slug: category.slug,
+      name: category.name,
+      label: category.description || fallback?.label || `Explora nuestra colección de ${category.name}.`,
+      description: category.description || fallback?.description || `Productos seleccionados en ${category.name}.`,
+      image: category.image_url || fallback?.image || "",
+    };
+  });
 }
 
 export async function getCatalogCategories(): Promise<Category[]> {
-  const now = Date.now();
-  if (categoriesCache && now - categoriesCache.at < CATALOG_CACHE_TTL_MS) {
-    return categoriesCache.promise;
-  }
-  const promise = loadCatalogCategories();
-  categoriesCache = { at: now, promise };
-  try {
-    return await promise;
-  } catch (error) {
-    categoriesCache = null;
-    throw error;
-  }
+  return loadCatalogCategories();
 }
 
 async function loadCatalogProducts(): Promise<Product[]> {

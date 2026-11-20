@@ -2752,6 +2752,29 @@ th {
   overflow-wrap: anywhere;
 }
 
+.admin-category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-category-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-category-actions button {
+  min-width: 32px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.admin-category-actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .category-sort-controls .filter-chip {
   cursor: pointer;
   font: inherit;

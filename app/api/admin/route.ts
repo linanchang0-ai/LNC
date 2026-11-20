@@ -153,18 +153,12 @@ export async function GET(request: Request) {
   }
 
   if (resource === "categories") {
-    const primaryResult = await supabase.from("categories").select("id, slug, name, name_zh").order("name");
-    let categoryRows = primaryResult.data as Record<string, unknown>[] | null;
-    let categoryError = primaryResult.error;
-    if (categoryError?.code === "42703") {
-      const fallbackResult = await supabase.from("categories").select("id, slug, name").order("name");
-      categoryRows = (fallbackResult.data ?? []).map((category) => ({ ...(category as Record<string, unknown>), name_zh: null }));
-      categoryError = fallbackResult.error;
+    const { data: categoryRows, error: categoryError } = await supabase.from("categories").select("id, slug, name, name_zh, sort_order").order("name");
+    if (categoryError) {
+      console.error("Failed to load admin categories:", categoryError);
+      return NextResponse.json({ error: "分类加载失败，请确认分类排序数据库迁移已执行。" }, { status: 500 });
     }
-    if (categoryError) return NextResponse.json({ error: "数据加载失败。" }, { status: 500 });
-    const sortedRows = sortCategoriesForDisplay(
-      (categoryRows ?? []) as unknown as { slug: string; name: string }[]
-    );
+    const sortedRows = sortCategoriesForDisplay(categoryRows ?? []);
     return NextResponse.json({ items: sortedRows });
   }
 

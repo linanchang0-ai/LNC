@@ -55,6 +55,8 @@ Antes de activar pagos reales, configura en PayPal el webhook `PAYMENT.CAPTURE.C
 
 Para administrar el carrusel de inicio, ejecuta también la migración `20261022120000_create_homepage_slides.sql`. Después, las cuentas con rol `admin` u `operations` pueden subir y ordenar imágenes desde `/admin/slides`.
 
+Para ordenar las categorías, aplica la migración `20261120110000_add_category_order.sql`. En el panel de productos, las flechas de cada categoría guardan el mismo orden para la tienda y el panel; las categorías nuevas se agregan al final.
+
 Al subir imágenes JPEG de productos desde el panel, el navegador las reduce a un máximo de 1600 píxeles de ancho y 8000 de alto y usa calidad 80, siempre que el resultado sea más pequeño. Las imágenes PNG, WebP y GIF compatibles de hasta 7 MB se conservan sin cambios para no perder transparencia o animación. Guarda los originales por separado.
 
 ## Estado actual
