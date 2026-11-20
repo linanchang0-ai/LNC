@@ -514,7 +514,7 @@ export default function AdminProductsPage() {
                   <thead><tr><th>商品</th><th>图片</th><th>分类</th><th>价格</th><th>库存状态</th><th>库存数量</th><th>状态</th><th>精选</th><th>操作</th></tr></thead>
                   <tbody>{group.products.map((product) => (
                 <tr key={product.id}>
-                  <td><div>{product.name}</div><button className="small-button" type="button" style={{ marginTop: 8 }} onClick={() => beginEditing(product)}>编辑</button></td>
+                  <td><div>{product.name}</div></td>
                   <td>{product.image_url ? <img className="admin-product-thumb" src={product.image_url} alt="" /> : "暂无图片"}</td>
                   <td>{categoryLabel(categoryBySlug(product.category))}</td>
                   <td>{formatPrice(product.price)}</td>
@@ -526,7 +526,7 @@ export default function AdminProductsPage() {
                       {product.featured ? "取消精选" : "设为精选"}
                     </button>
                   </td>
-                  <td><button className="small-button" type="button" onClick={() => void togglePublished(product)} disabled={publishingId === product.id}>{publishingId === product.id ? "正在更新..." : product.is_published ? "下架" : "发布"}</button><button className="small-button" type="button" onClick={() => void deleteProduct(product)} disabled={publishingId === product.id}>删除</button></td>
+                  <td><button className="small-button" type="button" onClick={() => void togglePublished(product)} disabled={publishingId === product.id}>{publishingId === product.id ? "正在更新..." : product.is_published ? "下架" : "发布"}</button><button className="small-button" type="button" onClick={() => void deleteProduct(product)} disabled={publishingId === product.id}>删除</button><button className="small-button" type="button" onClick={() => beginEditing(product)}>编辑</button></td>
                 </tr>
               ))}</tbody>
                 </table>
@@ -546,7 +546,7 @@ export default function AdminProductsPage() {
                 <span className="mobile-admin-product-chevron" aria-hidden="true" />
                 <span className="mobile-admin-product-summary-data"><span>{formatPrice(product.price)}</span><span>库存 {product.inventory_quantity ?? 0}</span></span>
               </summary>
-              <div className="mobile-admin-product-actions"><button className="small-button" type="button" onClick={() => beginEditing(product)}>编辑</button><button className="ghost-button" type="button" onClick={() => void togglePublished(product)} disabled={publishingId === product.id}>{publishingId === product.id ? "正在更新..." : product.is_published ? "下架" : "发布"}</button><button className="ghost-button" type="button" onClick={() => void toggleFeatured(product.id, product.featured)} disabled={publishingId === product.id}>{product.featured ? "取消精选" : "设为精选"}</button><button className="ghost-button mobile-admin-delete" type="button" onClick={() => void deleteProduct(product)} disabled={publishingId === product.id}>删除</button></div>
+              <div className="mobile-admin-product-actions"><button className="ghost-button" type="button" onClick={() => void togglePublished(product)} disabled={publishingId === product.id}>{publishingId === product.id ? "正在更新..." : product.is_published ? "下架" : "发布"}</button><button className="ghost-button" type="button" onClick={() => void toggleFeatured(product.id, product.featured)} disabled={publishingId === product.id}>{product.featured ? "取消精选" : "设为精选"}</button><button className="ghost-button mobile-admin-delete" type="button" onClick={() => void deleteProduct(product)} disabled={publishingId === product.id}>删除</button><button className="small-button" type="button" onClick={() => beginEditing(product)}>编辑</button></div>
             </details>;
           })}
               </div>
