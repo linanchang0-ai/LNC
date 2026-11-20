@@ -47,7 +47,7 @@ async function Collections({ products, categories, locale }: { products: Promise
 async function FeaturedProducts({ products, locale }: { products: Promise<Product[]>; locale: Locale }) {
   const resolvedProducts = await products;
   const t = (text: string) => translateText(locale, text);
-  const featured = resolvedProducts.filter((product) => product.featured).slice(0, 4);
+  const featured = resolvedProducts.filter((product) => product.featured).slice(0, 30);
   return (
     featured.length > 0 ? (
       <div className="product-grid">
